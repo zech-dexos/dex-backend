@@ -1,5 +1,4 @@
-from talnir import translate
-from engine import decompose
+from talnir import translate, decompose
 
 
 def dex_runtime(user_input: str) -> dict:
