@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dex_runtime import dex_runtime
 
@@ -22,3 +24,9 @@ def analyze(req: Request):
 @app.get("/health")
 def health():
     return {"status": "live"}
+
+@app.get("/")
+def index():
+    return FileResponse("index.html")
+
+app.mount("/static", StaticFiles(directory="."), name="static")
