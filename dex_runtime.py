@@ -1,36 +1,32 @@
-def dex_runtime(user_input: str):
+import sys
+import os
 
-    # TALNIR REASONING SPACE
-    paths = [
-        {"name": "direct", "description": "Answer directly", "confidence": 0.7},
-        {"name": "decompose", "description": "Break into structured steps", "confidence": 0.85},
-        {"name": "intent", "description": "Infer deeper meaning", "confidence": 0.75}
-    ]
+# Make reasonflow importable from the parent reasonflow repo
+# Assumes dex-backend is cloned alongside reasonflow:
+#   ~/reasonflow/reasonflow/talnir.py
+#   ~/reasonflow/reasonflow/engine.py
+REASONFLOW_PATH = os.path.expanduser("~/reasonflow")
+if REASONFLOW_PATH not in sys.path:
+    sys.path.insert(0, REASONFLOW_PATH)
 
-    # SELECT BEST PATH
-    selected = max(paths, key=lambda p: p["confidence"])
+from reasonflow.talnir import translate
+from reasonflow.engine import decompose
 
-    # EXECUTION LAYER
-    if selected["name"] == "direct":
-        output = f"Dex → {user_input}"
 
-    elif selected["name"] == "decompose":
-        output = (
-            f"Dex decomposition:\n"
-            f"- Input: {user_input}\n"
-            f"- Step 1: analyze components\n"
-            f"- Step 2: map relationships\n"
-            f"- Step 3: construct response"
-        )
+def dex_runtime(user_input: str) -> dict:
+    """
+    Real ReasonFlow pipeline:
+    NL input → Talnir signal → engine decomposition → structured output
+    """
+    result = decompose(user_input)
+    signal = result["signal"]
 
-    else:
-        output = f"Dex intent model → interpreting: {user_input}"
-
-    # TALNIR TRACE OUTPUT (CRITICAL CONTRACT)
     return {
         "input": user_input,
-        "output": output,
-        "selected_path": selected["name"],
-        "reasoning_trace": selected["description"],
-        "reasoning_paths": paths
+        "intent": signal.intent,
+        "domain": signal.domain,
+        "modifiers": signal.modifiers,
+        "tools": signal.tools,
+        "context": result["context"],
+        "branches": result["branches"],
     }
