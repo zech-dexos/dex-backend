@@ -15,7 +15,7 @@ import json
 import urllib.request
 import urllib.error
 
-from .talnir import decompose
+from talnir import decompose
 from .dex import select
 from .memory import load_state, save_state
 from .sigil import SigilMemory
