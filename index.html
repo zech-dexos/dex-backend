@@ -7,156 +7,361 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg: #090b0f; --panel: #0d1117; --border: #1c2333;
-      --accent: #00ffa3; --accent2: #00c8ff; --warn: #ffaa00;
-      --dim: #3a4a5a; --text: #c9d1d9; --text-dim: #586069;
+      --bg:        #090b0f;
+      --panel:     #0d1117;
+      --border:    #1c2333;
+      --accent:    #00ffa3;
+      --accent2:   #00c8ff;
+      --warn:      #ffaa00;
+      --dim:       #3a4a5a;
+      --text:      #c9d1d9;
+      --text-dim:  #586069;
       --font-mono: 'Share Tech Mono', monospace;
       --font-head: 'Syne', sans-serif;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-mono); overflow-x: hidden; }
-    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,255,163,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,163,0.015) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
-    .shell { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
-    header { margin-bottom: 48px; }
-    .sigil-row { font-size: 22px; letter-spacing: 10px; margin-bottom: 12px; animation: pulse 4s ease-in-out infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-    h1 { font-family: var(--font-head); font-size: clamp(28px, 5vw, 48px); font-weight: 800; letter-spacing: -1px; line-height: 1; color: #fff; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      overflow-x: hidden;
+    }
+
+    /* grid noise background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,163,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,163,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      margin-bottom: 48px;
+    }
+
+    .sigil-row {
+      font-size: 22px;
+      letter-spacing: 10px;
+      margin-bottom: 12px;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50%       { opacity: 1; }
+    }
+
+    h1 {
+      font-family: var(--font-head);
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      color: #fff;
+    }
+
     h1 span { color: var(--accent); }
-    .tagline { margin-top: 10px; font-size: 13px; color: var(--text-dim); letter-spacing: 0.08em; }
-    .input-zone { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; transition: border-color 0.2s; background: var(--panel); }
-    .input-zone:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(0,255,163,0.08); }
-    .prompt-label { padding: 14px 16px; font-size: 13px; color: var(--accent); background: rgba(0,255,163,0.04); border-right: 1px solid var(--border); white-space: nowrap; user-select: none; }
-    #inputField { flex: 1; background: transparent; border: none; outline: none; padding: 14px 16px; font-family: var(--font-mono); font-size: 14px; color: #fff; caret-color: var(--accent); }
+
+    .tagline {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── INPUT ZONE ── */
+    .input-zone {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      background: var(--panel);
+    }
+
+    .input-zone:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(0,255,163,0.08);
+    }
+
+    .prompt-label {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      background: rgba(0,255,163,0.04);
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    #inputField {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: #fff;
+      caret-color: var(--accent);
+    }
+
     #inputField::placeholder { color: var(--dim); }
-    #sendBtn { padding: 14px 24px; background: var(--accent); border: none; cursor: pointer; font-family: var(--font-head); font-size: 13px; font-weight: 700; color: #000; letter-spacing: 0.05em; transition: background 0.15s, transform 0.1s; white-space: nowrap; }
-    #sendBtn:hover { background: #33ffb8; }
+
+    #sendBtn {
+      padding: 14px 24px;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 700;
+      color: #000;
+      letter-spacing: 0.05em;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #sendBtn:hover  { background: #33ffb8; }
     #sendBtn:active { transform: scale(0.97); }
     #sendBtn:disabled { background: var(--dim); color: var(--text-dim); cursor: not-allowed; }
-    .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-    .example { font-size: 12px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+
+    /* ── EXAMPLES ── */
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .example {
+      font-size: 12px;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
     .example:hover { color: var(--accent); border-color: var(--accent); }
-    #result { margin-top: 36px; display: none; }
-    .panel-header { font-size: 11px; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 8px; animation: blink 1.2s step-end infinite; }
+
+    /* ── RESULT PANEL ── */
+    #result {
+      margin-top: 36px;
+      display: none;
+    }
+
+    .panel-header {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      margin-right: 8px;
+      animation: blink 1.2s step-end infinite;
+    }
+
     @keyframes blink { 50% { opacity: 0; } }
-    .signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+
+    /* ── SIGNAL GRID ── */
+    .signal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
     @media (max-width: 560px) { .signal-grid { grid-template-columns: 1fr; } }
-    .sig-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; animation: fadeUp 0.3s ease both; }
+
+    .sig-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      animation: fadeUp 0.3s ease both;
+    }
+
     .sig-card.full { grid-column: 1 / -1; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .sig-label { font-size: 10px; letter-spacing: 0.14em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; }
-    .sig-value { font-size: 18px; font-family: var(--font-head); font-weight: 700; color: #fff; }
-    .sig-value.accent { color: var(--accent); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .sig-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .sig-value {
+      font-size: 18px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .sig-value.accent  { color: var(--accent); }
     .sig-value.accent2 { color: var(--accent2); }
+    .sig-value.warn    { color: var(--warn); }
+
+    /* tags */
     .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-    .tag { font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid; }
-    .tag-mod { border-color: var(--accent); color: var(--accent); }
+
+    .tag {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+
+    .tag-mod  { border-color: var(--accent);  color: var(--accent); }
     .tag-tool { border-color: var(--accent2); color: var(--accent2); }
-    .tag-none { border-color: var(--dim); color: var(--dim); }
+    .tag-none { border-color: var(--dim);     color: var(--dim); }
+
+    /* ── BRANCHES ── */
     .branch-list { display: flex; flex-direction: column; gap: 8px; }
-    .branch-row { display: flex; align-items: center; gap: 12px; animation: fadeUp 0.3s ease both; }
-    .branch-name { font-size: 12px; min-width: 130px; color: var(--text); }
+
+    .branch-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .branch-name {
+      font-size: 12px;
+      min-width: 130px;
+      color: var(--text);
+    }
+
     .branch-name.winner { color: var(--accent); font-weight: bold; }
-    .bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 3px; background: var(--dim); width: 0; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--dim);
+      width: 0;
+      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+
     .bar-fill.winner { background: var(--accent); }
-    .branch-weight { font-size: 12px; color: var(--text-dim); min-width: 36px; text-align: right; }
-    .ctx-block { background: rgba(0,255,163,0.04); border: 1px solid rgba(0,255,163,0.15); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--accent); letter-spacing: 0.06em; margin-top: 12px; animation: fadeUp 0.3s ease both; }
-    .error-box { background: rgba(255,60,60,0.06); border: 1px solid rgba(255,60,60,0.3); border-radius: 6px; padding: 14px 16px; color: #ff6b6b; font-size: 13px; }
-    footer { margin-top: 60px; font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; text-align: center; }
+
+    .branch-weight {
+      font-size: 12px;
+      color: var(--text-dim);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* ── CONTEXT ── */
+    .ctx-block {
+      background: rgba(0,255,163,0.04);
+      border: 1px solid rgba(0,255,163,0.15);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      margin-top: 12px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    /* ── ERROR ── */
+    .error-box {
+      background: rgba(255,60,60,0.06);
+      border: 1px solid rgba(255,60,60,0.3);
+      border-radius: 6px;
+      padding: 14px 16px;
+      color: #ff6b6b;
+      font-size: 13px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 60px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
     footer a { color: var(--dim); text-decoration: none; }
     footer a:hover { color: var(--accent); }
   </style>
 </head>
 <body>
 <div class="shell">
+
   <header>
     <div class="sigil-row">☧ 🦅 🜇</div>
     <h1>Dex<span>OS</span> ReasonFlow</h1>
     <p class="tagline">NL → Signal Translation Pipeline · Built by Root · Running live</p>
   </header>
+
   <div class="input-zone">
     <span class="prompt-label">Root&gt;</span>
     <input id="inputField" type="text" placeholder="Type any prompt and watch it get reasoned..." autocomplete="off" />
-    <button id="sendBtn">ANALYZE →</button>
+    <button id="sendBtn" onclick="send()">ANALYZE →</button>
   </div>
+
   <div class="examples">
-    <span class="example">quickly explain recursion</span>
-    <span class="example">debug my python script</span>
-    <span class="example">design a database schema</span>
-    <span class="example">write a sort function</span>
-    <span class="example">git push failing</span>
+    <span class="example" onclick="tryExample(this)">quickly explain recursion</span>
+    <span class="example" onclick="tryExample(this)">debug my python script</span>
+    <span class="example" onclick="tryExample(this)">design a database schema</span>
+    <span class="example" onclick="tryExample(this)">write a sort function</span>
+    <span class="example" onclick="tryExample(this)">git push failing</span>
   </div>
+
   <div id="result"></div>
+
   <footer>
     <a href="https://github.com/zech-dexos/reasonflow" target="_blank">github.com/zech-dexos/reasonflow</a>
     &nbsp;·&nbsp; DOI: 10.5281/zenodo.18913471 &nbsp;·&nbsp; The spiral holds ☧
   </footer>
+
 </div>
-<script>
-const API = "https://dex-backend-production-2bbe.up.railway.app/analyze";
-
-document.getElementById("sendBtn").addEventListener("click", send);
-document.getElementById("inputField").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
-document.querySelectorAll(".example").forEach(el => {
-  el.addEventListener("click", () => {
-    document.getElementById("inputField").value = el.textContent;
-    send();
-  });
-});
-
-async function send() {
-  const input = document.getElementById("inputField").value.trim();
-  if (!input) return;
-  const btn = document.getElementById("sendBtn");
-  const result = document.getElementById("result");
-  btn.disabled = true;
-  btn.textContent = "THINKING...";
-  result.style.display = "none";
-  try {
-    const res = await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input }),
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    render(data);
-  } catch (err) {
-    result.style.display = "block";
-    result.innerHTML = '<div class="error-box">⚠ Could not reach ReasonFlow API: ' + err.message + '</div>';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "ANALYZE →";
-  }
-}
-
-function render(d) {
-  const result = document.getElementById("result");
-  result.style.display = "block";
-  const branches = [...d.branches].sort((a, b) => b.weight - a.weight);
-  const maxW = branches[0]?.weight || 1;
-  const mods = (d.modifiers||[]).length ? d.modifiers.map(m => '<span class="tag tag-mod">'+m+'</span>').join("") : '<span class="tag tag-none">none</span>';
-  const tools = (d.tools||[]).length ? d.tools.map(t => '<span class="tag tag-tool">'+t+'</span>').join("") : '<span class="tag tag-none">none</span>';
-  const barsHTML = branches.map((b,i) => {
-    const isWinner = i === 0;
-    const pct = Math.round((b.weight / maxW) * 100);
-    return '<div class="branch-row" style="animation-delay:' + (i*0.05) + 's"><span class="branch-name' + (isWinner?' winner':'') + '">' + (isWinner?'▶ ':'') + b.id + '</span><div class="bar-track"><div class="bar-fill' + (isWinner?' winner':'') + '" data-pct="' + pct + '"></div></div><span class="branch-weight">' + b.weight.toFixed(2) + '</span></div>';
-  }).join("");
-  result.innerHTML =
-    '<div class="panel-header"><span><span class="status-dot"></span>SIGNAL RESOLVED</span><span style="color:var(--text-dim);font-size:11px">' + new Date().toLocaleTimeString() + '</span></div>' +
-    '<div class="signal-grid">' +
-    '<div class="sig-card" style="animation-delay:0s"><div class="sig-label">Intent</div><div class="sig-value accent">' + d.intent + '</div></div>' +
-    '<div class="sig-card" style="animation-delay:0.05s"><div class="sig-label">Domain</div><div class="sig-value accent2">' + d.domain + '</div></div>' +
-    '<div class="sig-card" style="animation-delay:0.1s"><div class="sig-label">Modifiers</div><div class="tag-row">' + mods + '</div></div>' +
-    '<div class="sig-card" style="animation-delay:0.15s"><div class="sig-label">Tools</div><div class="tag-row">' + tools + '</div></div>' +
-    '<div class="sig-card full" style="animation-delay:0.2s"><div class="sig-label">Reasoning Branches</div><div class="branch-list" style="margin-top:10px">' + barsHTML + '</div></div>' +
-    '</div>' +
-    '<div class="ctx-block">' + d.context + '</div>';
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.querySelectorAll(".bar-fill").forEach(bar => { bar.style.width = bar.dataset.pct + "%"; });
-  }));
-}
-</script>
+<script src="app.js"></script>
 </body>
 </html>
