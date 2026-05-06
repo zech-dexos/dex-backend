@@ -379,6 +379,33 @@
 
   /* error state */
   .msg.error .msg-body { color: var(--red-dim); }
+
+  /* ── FEEDBACK ── */
+  .feedback-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    align-items: center;
+  }
+
+  .feedback-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--mono);
+  }
+
+  .feedback-btn:hover { border-color: var(--border-hot); color: var(--text-dim); }
+  .feedback-btn.good.active { border-color: var(--green); color: var(--green); }
+  .feedback-btn.bad.active  { border-color: var(--red-dim); color: var(--red-dim); }
+  .feedback-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+  .feedback-label.sent { color: var(--green); }
+
 </style>
 </head>
 <body>
@@ -681,11 +708,63 @@ async function submit() {
   cursor.remove();
   if (fullText) {
     history.push({ role: 'assistant', content: fullText });
+    // add feedback buttons if we have sigil_ids
+    if (signal?.sigil_ids?.length) {
+      addFeedback(dexEl, signal.sigil_ids);
+    }
   }
 
   streaming = false;
   updateSendState();
   scrollBottom();
+}
+
+// ── FEEDBACK ─────────────────────────────────────────────────────
+function addFeedback(msgEl, sigilIds) {
+  const row = document.createElement('div');
+  row.className = 'feedback-row';
+
+  const label = document.createElement('span');
+  label.className = 'feedback-label';
+  label.textContent = 'sigil feedback';
+
+  const good = document.createElement('button');
+  good.className = 'feedback-btn good';
+  good.textContent = '↑';
+  good.title = 'good response — reinforce sigils';
+
+  const bad = document.createElement('button');
+  bad.className = 'feedback-btn bad';
+  bad.title = 'bad response — mark failure';
+  bad.textContent = '↓';
+
+  async function sendFeedback(outcome, btn, other) {
+    btn.classList.add('active');
+    other.disabled = true;
+    good.disabled = true;
+    bad.disabled = true;
+    label.textContent = 'sending...';
+    try {
+      const res = await fetch('https://dex-backend-production-2bbe.up.railway.app/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sigil_ids: sigilIds, outcome })
+      });
+      const data = await res.json();
+      label.textContent = outcome === 'good' ? 'reinforced ✓' : 'failure noted ✓';
+      label.className = 'feedback-label sent';
+    } catch (e) {
+      label.textContent = 'feedback failed';
+    }
+  }
+
+  good.addEventListener('click', () => sendFeedback('good', good, bad));
+  bad.addEventListener('click',  () => sendFeedback('bad',  bad,  good));
+
+  row.appendChild(label);
+  row.appendChild(good);
+  row.appendChild(bad);
+  msgEl.appendChild(row);
 }
 
 // ── BUILD SYSTEM PROMPT ──────────────────────────────────────────
