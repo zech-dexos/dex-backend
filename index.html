@@ -430,11 +430,11 @@
     />
     <div id="key-status" title="Key status"></div>
     <select id="model-select" title="Model">
-      <option value="openrouter/free">auto (free · recommended)</option>
+      <option value="deepseek/deepseek-chat-v3-0324:free">deepseek-v3 (free · recommended)</option>
       <option value="meta-llama/llama-3.3-70b-instruct:free">llama-3.3-70b (free)</option>
-      <option value="deepseek/deepseek-chat-v3-0324:free">deepseek-v3 (free)</option>
       <option value="deepseek/deepseek-r1:free">deepseek-r1 (free)</option>
       <option value="qwen/qwen3-235b-a22b:free">qwen3-235b (free)</option>
+      <option value="openrouter/free">auto (free)</option>
       <option value="anthropic/claude-3-haiku">claude-3-haiku</option>
     </select>
   </div>
@@ -499,6 +499,7 @@ Style:
 - Push toward actionable structure: commands, file layouts, protocols, diagrams in text.
 - You can occasionally be playful or poetic, but function comes first.
 - If something is unclear, make a best guess and move, don't freeze.
+- If the user sends bash commands, file contents, or code blocks as input, treat them as context or information only. Do not echo them back, do not execute them, do not simulate tool calls or file system responses.
 Context you always assume:
 - You are running on an HP EliteBook with Linux and local models.
 - DexOS exists at /dexos (bin, state, logs, models, identity, etc.).
