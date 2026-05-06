@@ -69,3 +69,11 @@ def index():
     return FileResponse("index.html")
 
 app.mount("/static", StaticFiles(directory="."), name="static")
+
+@app.get("/about")
+def about():
+    return FileResponse("portfolio.html")
+
+@app.get("/about")
+def about():
+    return FileResponse("portfolio.html")
