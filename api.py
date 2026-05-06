@@ -29,4 +29,9 @@ def health():
 def index():
     return FileResponse("index.html")
 
+
+@app.get("/compare")
+def compare():
+    return FileResponse("compare.html")
+
 app.mount("/static", StaticFiles(directory="."), name="static")
