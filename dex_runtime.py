@@ -1,25 +1,24 @@
-import sys
-import os
+from talnir import translate, decompose
 
-# Make reasonflow importable from the parent reasonflow repo
-# Assumes dex-backend is cloned alongside reasonflow:
-#   ~/reasonflow/reasonflow/talnir.py
-#   ~/reasonflow/reasonflow/engine.py
-REASONFLOW_PATH = os.path.expanduser("~/reasonflow")
-if REASONFLOW_PATH not in sys.path:
-    sys.path.insert(0, REASONFLOW_PATH)
-
-from reasonflow.talnir import translate
-from reasonflow.engine import decompose
+try:
+    from sigil import SigilMemory
+    _memory = SigilMemory()
+    SIGIL_ACTIVE = True
+except ImportError:
+    SIGIL_ACTIVE = False
+    _memory = None
 
 
 def dex_runtime(user_input: str) -> dict:
-    """
-    Real ReasonFlow pipeline:
-    NL input → Talnir signal → engine decomposition → structured output
-    """
     result = decompose(user_input)
     signal = result["signal"]
+
+    sigil_ids = []
+    if SIGIL_ACTIVE and _memory:
+        context = signal.domain or "CTX:ALL"
+        active = _memory.activate_for_context(context)
+        active = _memory.resolve_conflicts(active, context)
+        sigil_ids = [s.id for s in active]
 
     return {
         "input": user_input,
@@ -29,4 +28,5 @@ def dex_runtime(user_input: str) -> dict:
         "tools": signal.tools,
         "context": result["context"],
         "branches": result["branches"],
+        "sigil_ids": sigil_ids,
     }
