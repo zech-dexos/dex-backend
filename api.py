@@ -77,3 +77,7 @@ def about():
 @app.get("/about")
 def about():
     return FileResponse("portfolio.html")
+
+@app.get("/local")
+def local():
+    return FileResponse("local_dex.html")
