@@ -74,7 +74,16 @@ INTENT_PATTERNS = [
     (r"\b(git|commit|push|pull|branch|merge|rebase|clone)\b",
      "git_operation", "coding", ["tool_use"]),
 
+    # CREATIVE — must be before file_operation to prevent "write" collision
+    (r"\b(write|create|generate)\b.{0,30}\b(story|poem|fiction|narrative|character|dialogue|creative)\b",
+     "creative_write", "creative", ["exploratory"]),
+
+    # CREATIVE
+    (r"\b(write|create|generate)\b.{0,30}\b(story|poem|fiction|narrative|character|dialogue|creative)\b",
+     "creative_write", "creative", ["exploratory"]),
+
     # TOOL — execute command
+
     (r"\b(run|execute|launch|start|stop|restart|kill|process)\b",
      "execute", "tool", ["tool_use"]),
 
@@ -93,6 +102,11 @@ INTENT_PATTERNS = [
     # PLANNING — roadmap
     (r"\b(roadmap|steps|what do i need|how do i approach|where do i start)\b",
      "roadmap", "planning", ["step_by_step"]),
+
+
+    # MATH
+    (r"\b(calculate|compute|solve|equation|algebra|calculus|derivative|integral|probability|statistics|matrix)\b",
+     "math", "math", ["structured"]),
 
     # BRIEF request — modifier only, no intent override
     (r"\b(quick|quickly|briefly|brief|short|summary|tldr|in one line|just tell me)\b",

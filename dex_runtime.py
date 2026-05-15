@@ -1,4 +1,9 @@
 from talnir import translate, decompose
+try:
+    from model_router import route, route_info
+    ROUTER_ACTIVE = True
+except ImportError:
+    ROUTER_ACTIVE = False
 
 try:
     from sigil import SigilMemory
@@ -7,7 +12,6 @@ try:
 except ImportError:
     SIGIL_ACTIVE = False
     _memory = None
-
 
 def dex_runtime(user_input: str) -> dict:
     result = decompose(user_input)
@@ -20,13 +24,17 @@ def dex_runtime(user_input: str) -> dict:
         active = _memory.resolve_conflicts(active, context)
         sigil_ids = [s.id for s in active]
 
+    routing = route_info(signal) if ROUTER_ACTIVE else {"model": "dex:latest", "reason": "router unavailable"}
+
     return {
-        "input": user_input,
-        "intent": signal.intent,
-        "domain": signal.domain,
-        "modifiers": signal.modifiers,
-        "tools": signal.tools,
-        "context": result["context"],
+        "input":    user_input,
+        "intent":   signal.intent,
+        "domain":   signal.domain,
+        "modifiers":signal.modifiers,
+        "tools":    signal.tools,
+        "context":  result["context"],
         "branches": result["branches"],
-        "sigil_ids": sigil_ids,
+        "sigil_ids":sigil_ids,
+        "model":    routing["model"],
+        "route_reason": routing["reason"],
     }
