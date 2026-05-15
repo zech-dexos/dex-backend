@@ -505,6 +505,15 @@ function escHtml(s) {
 
 // ── Load model ───────────────────────────────────────────────────────────
 window.loadDex = async function() {
+  if (!navigator.gpu) {
+    document.getElementById('boot-sub').innerHTML =
+      'WebGPU is not available on this device.<br><br>' +
+      'Local Dex requires a desktop browser (Chrome or Edge).<br><br>' +
+      '<a href="/" style="color:var(--amber);text-decoration:none">← Use hosted Dex instead ↗</a>';
+    document.getElementById('load-btn').style.display = 'none';
+    return;
+  }
+  if (
   const btn = document.getElementById('load-btn');
   btn.disabled = true;
   btn.textContent = 'Loading…';
