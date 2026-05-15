@@ -406,6 +406,21 @@
   .feedback-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
   .feedback-label.sent { color: var(--green); }
 
+
+@media (max-width: 640px) {
+  #app { padding: 0 10px; }
+  #key-bar { flex-wrap: wrap; gap: 4px 8px; }
+  #key-bar label { display: none; }
+  #api-key-input { flex: 1 1 calc(100% - 24px); min-width: 0; }
+  #model-select { flex: 1 1 100%; font-size: 10px; }
+  .wordmark { font-size: 16px; }
+  .model-badge { font-size: 10px; padding: 2px 6px; }
+  #empty-state .big-sigil { font-size: 36px; }
+  .example-chip { font-size: 10px; }
+  #prompt-input { font-size: 16px; }
+  #send-btn { padding: 10px 12px; font-size: 12px; }
+  .footer-meta { flex-direction: column; gap: 2px; text-align: center; }
+}
 </style>
 </head>
 <body>

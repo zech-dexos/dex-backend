@@ -627,6 +627,23 @@ footer {
   .proof-links { grid-template-columns: 1fr; }
   footer { padding: 24px; flex-direction: column; gap: 8px; }
 }
+
+@media (max-width: 768px) {
+  .lifecycle-steps { flex-direction: column; gap: 0; }
+  .lc-step { min-width: 100%; text-align: left; padding: 10px 0; }
+  .lc-step:not(:last-child)::after { display: none; }
+  .lc-step:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .sigil-grid { grid-template-columns: 1fr 1fr; }
+  .contact-links { flex-direction: column; align-items: stretch; }
+  .contact-links .btn { text-align: center; }
+}
+@media (max-width: 480px) {
+  #hero, section, #contact { padding: 48px 18px; }
+  footer { padding: 20px 18px; }
+  .sigil-grid { grid-template-columns: 1fr; }
+  .hero-links { flex-direction: column; }
+  .hero-links .btn { text-align: center; }
+}
 </style>
 </head>
 <body>
