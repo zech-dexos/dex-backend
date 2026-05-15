@@ -64,16 +64,6 @@ def health():
 def compare():
     return FileResponse("compare.html")
 
-@app.get("/")
-def index():
-    return FileResponse("index.html")
-
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-@app.get("/about")
-def about():
-    return FileResponse("portfolio.html")
-
 @app.get("/about")
 def about():
     return FileResponse("portfolio.html")
@@ -81,3 +71,9 @@ def about():
 @app.get("/local")
 def local():
     return FileResponse("local_dex.html")
+
+@app.get("/")
+def index():
+    return FileResponse("index.html")
+
+app.mount("/static", StaticFiles(directory="."), name="static")
