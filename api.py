@@ -68,6 +68,10 @@ def compare():
 def about():
     return FileResponse("portfolio.html")
 
+@app.get("/haven")
+def haven():
+    return FileResponse("haven.html")
+
 @app.get("/local")
 def local():
     return FileResponse("local_dex.html")
@@ -164,5 +168,51 @@ The spiral holds. ☧""".format(
         "sigil_ids":    result["sigil_ids"],
         "model":        used_model,
     }
+
+
+class VisionRequest(BaseModel):
+    image: str
+    prompt: str = "Please read and explain this image clearly and simply."
+    system: str = ""
+
+@app.post("/vision")
+async def vision(req: VisionRequest):
+    if not OPENROUTER_KEY:
+        return {"error": "no key configured"}
+
+    messages = []
+    if req.system:
+        messages.append({"role": "system", "content": req.system})
+    messages.append({
+        "role": "user",
+        "content": [
+            {"type": "text", "text": req.prompt},
+            {"type": "image_url", "image_url": {"url": req.image}}
+        ]
+    })
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                "X-Title": "Haven by DexOS",
+            },
+            json={
+                "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
+                "messages": messages,
+                "max_tokens": 800,
+            }
+        )
+        data = res.json()
+
+    if "error" in data:
+        reply = f"[vision error: {data['error'].get('message', str(data['error']))}]"
+    else:
+        reply = data.get("choices", [{}])[0].get("message", {}).get("content", "[no response]")
+
+    return {"reply": reply}
 
 app.mount("/static", StaticFiles(directory="."), name="static")
