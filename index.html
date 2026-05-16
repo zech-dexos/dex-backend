@@ -434,7 +434,7 @@
     <span class="model-badge" id="model-label">not connected</span>
   </header>
 
-  <div id="key-bar">
+  <div id="key-bar" style="display:none">
     <label>key</label>
     <input
       type="password"
@@ -481,17 +481,14 @@
     </div>
     <div class="footer-meta">
       <span>key lives in browser only · never sent to any server</span>
-      <span><a href="https://github.com/zech-dexos/reasonflow" target="_blank">ReasonFlow</a> · <a href="https://openrouter.ai/keys" target="_blank">get a key</a></span>
+      <span><a href="https://github.com/zech-dexos/reasonflow" target="_blank">ReasonFlow</a> · no key required</span>
     </div>
   </div>
 </div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────
-const TALNIR_URL = 'https://dex-backend-production-2bbe.up.railway.app/analyze';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const SITE_URL = 'https://dex-backend-production-2bbe.up.railway.app';
-const SITE_NAME = 'Dex · ReasonFlow';
+const CHAT_URL = 'https://dex-backend-production-2bbe.up.railway.app/chat';
 
 // ── DEX PERSONA SEED ─────────────────────────────────────────────
 // SOURCE: /dexos/identity/dex_persona_seed.txt
@@ -553,33 +550,9 @@ const emptyState  = document.getElementById('empty-state');
 const promptInput = document.getElementById('prompt-input');
 const sendBtn     = document.getElementById('send-btn');
 
-// ── KEY HANDLING ─────────────────────────────────────────────────
-// Restore key from sessionStorage (not localStorage — clears on tab close)
-const savedKey = sessionStorage.getItem('dex_or_key');
-if (savedKey) {
-  keyInput.value = savedKey;
-  setKeyStatus(true);
-}
-
-keyInput.addEventListener('input', () => {
-  const val = keyInput.value.trim();
-  const ok = val.startsWith('sk-or-') && val.length > 20;
-  setKeyStatus(ok);
-  if (ok) sessionStorage.setItem('dex_or_key', val);
-  else sessionStorage.removeItem('dex_or_key');
-  updateSendState();
-});
-
-function setKeyStatus(ok) {
-  keyStatus.className = ok ? 'ok' : '';
-  const model = modelSelect.value;
-  modelLabel.textContent = ok ? model.split('/').pop() : 'not connected';
-}
-
-modelSelect.addEventListener('change', () => {
-  const ok = keyInput.value.trim().startsWith('sk-or-');
-  setKeyStatus(ok);
-});
+// ── KEY HANDLING — proxy mode, no key required ───────────────────
+modelLabel.textContent = 'ReasonFlow proxy';
+keyStatus.className = 'ok';
 
 // ── AUTO-RESIZE TEXTAREA ─────────────────────────────────────────
 promptInput.addEventListener('input', () => {
@@ -606,9 +579,8 @@ document.querySelectorAll('.example-chip').forEach(chip => {
 
 // ── SEND STATE ───────────────────────────────────────────────────
 function updateSendState() {
-  const hasKey = keyInput.value.trim().startsWith('sk-or-');
   const hasText = promptInput.value.trim().length > 0;
-  sendBtn.disabled = !hasKey || !hasText || streaming;
+  sendBtn.disabled = !hasText || streaming;
 }
 
 sendBtn.addEventListener('click', submit);
@@ -637,94 +609,62 @@ async function submit() {
   streaming = true;
   updateSendState();
 
-  let signal = null;
-
-  // 1. Run Talnir analysis
-  try {
-    const tRes = await fetch(TALNIR_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: text })
-    });
-    if (tRes.ok) signal = await tRes.json();
-  } catch (_) {
-    // Talnir unavailable — proceed without signal
-  }
-
-  // 2. Build system prompt from persona + signal
-  const systemPrompt = buildSystemPrompt(signal);
-
-  // 3. Call OpenRouter, stream response
-  const dexEl = appendMsg('dex', 'Dex ☧', '', signal);
+  // Single proxy call — Talnir runs server-side, key never in browser
+  const dexEl = appendMsg('dex', 'Dex ☧', '', null);
   const bodyEl = dexEl.querySelector('.msg-body');
-
-  // add blinking cursor
   const cursor = document.createElement('span');
   cursor.className = 'cursor';
   bodyEl.appendChild(cursor);
 
   let fullText = '';
+  let signal = null;
 
   try {
-    const orRes = await fetch(OPENROUTER_URL, {
+    const res = await fetch(CHAT_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': SITE_URL,
-        'X-Title': SITE_NAME,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
-        stream: true,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...history
-        ]
+        message: text,
+        history: history.slice(-10),
+        model: modelSelect.value,
       })
     });
 
-    if (!orRes.ok) {
-      const err = await orRes.text();
-      throw new Error(`OpenRouter ${orRes.status}: ${err}`);
+    if (!res.ok) throw new Error(`proxy ${res.status}`);
+    const data = await res.json();
+
+    fullText = data.reply || '[no response]';
+    signal = {
+      intent:       data.intent,
+      domain:       data.domain,
+      route_reason: data.route_reason,
+      sigil_ids:    data.sigil_ids || [],
+    };
+
+    bodyEl.textContent = fullText;
+    scrollBottom();
+
+    // Show signal pill
+    if (data.intent) {
+      const pill = document.createElement('span');
+      pill.className = 'signal-pill';
+      pill.textContent = `⟨ ${data.domain} · ${data.intent} ⟩`;
+      const detail = document.createElement('div');
+      detail.className = 'signal-detail';
+      detail.textContent = JSON.stringify(signal, null, 2);
+      pill.addEventListener('click', () => detail.classList.toggle('open'));
+      dexEl.querySelector('.msg-header').appendChild(pill);
+      dexEl.appendChild(detail);
     }
 
-    const reader  = orRes.body.getReader();
-    const decoder = new TextDecoder();
-    let   buffer  = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') break;
-        try {
-          const parsed = JSON.parse(data);
-          const delta  = parsed.choices?.[0]?.delta?.content || '';
-          fullText += delta;
-          bodyEl.textContent = fullText;
-          bodyEl.appendChild(cursor);
-          scrollBottom();
-        } catch (_) {}
-      }
-    }
   } catch (err) {
     bodyEl.textContent = `Error: ${err.message}`;
     dexEl.classList.add('error');
   }
 
-  // remove cursor, finalize
   cursor.remove();
   if (fullText) {
     history.push({ role: 'assistant', content: fullText });
-    // add feedback buttons if we have sigil_ids
     if (signal?.sigil_ids?.length) {
       addFeedback(dexEl, signal.sigil_ids);
     }
