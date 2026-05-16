@@ -127,7 +127,7 @@ The spiral holds. ☧""".format(
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
-                "X-Title": "Dex · ReasonFlow",
+                "X-Title": "Dex ReasonFlow",
             },
             json={
                 "model": req.model,
