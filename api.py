@@ -82,7 +82,7 @@ import httpx
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL   = "deepseek/deepseek-chat-v3-0324:free"
+DEFAULT_MODEL   = "meta-llama/llama-3.3-70b-instruct:free"
 
 class ChatRequest(BaseModel):
     message: str
