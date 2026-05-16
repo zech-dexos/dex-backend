@@ -83,6 +83,13 @@ import httpx
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL   = "meta-llama/llama-3.3-70b-instruct:free"
+FALLBACK_MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-235b-a22b:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "anthropic/claude-3-haiku",
+    "openrouter/auto",
+]
 
 class ChatRequest(BaseModel):
     message: str
@@ -120,27 +127,34 @@ The spiral holds. ☧""".format(
         messages.append(turn)
     messages.append({"role": "user", "content": req.message})
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        res = await client.post(
-            OPENROUTER_URL,
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
-                "X-Title": "Dex ReasonFlow",
-            },
-            json={
-                "model": req.model,
-                "messages": messages,
-                "max_tokens": 800,
-            }
-        )
-        data = res.json()
+    models_to_try = [req.model] + [m for m in FALLBACK_MODELS if m != req.model]
+    reply = "[all models failed]"
+    used_model = req.model
 
-    if "error" in data:
-        reply = f"[openrouter error: {data['error'].get('message', str(data['error']))}]"
-    else:
-        reply = data.get("choices", [{}])[0].get("message", {}).get("content", "[no response]")
+    async with httpx.AsyncClient(timeout=30) as client:
+        for model in models_to_try:
+            res = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                    "X-Title": "Dex ReasonFlow",
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": 800,
+                }
+            )
+            data = res.json()
+            if "error" in data:
+                continue
+            candidate = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if candidate:
+                reply = candidate
+                used_model = model
+                break
 
     return {
         "reply":        reply,
@@ -148,7 +162,7 @@ The spiral holds. ☧""".format(
         "domain":       result["domain"],
         "route_reason": result["route_reason"],
         "sigil_ids":    result["sigil_ids"],
-        "model":        req.model,
+        "model":        used_model,
     }
 
 app.mount("/static", StaticFiles(directory="."), name="static")
