@@ -626,7 +626,7 @@ async function submit() {
       body: JSON.stringify({
         message: text,
         history: history.slice(-10),
-        model: modelSelect.value,
+        model: "meta-llama/llama-3.3-70b-instruct:free",
       })
     });
 
