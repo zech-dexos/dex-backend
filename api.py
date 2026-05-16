@@ -137,7 +137,10 @@ The spiral holds. ☧""".format(
         )
         data = res.json()
 
-    reply = data.get("choices", [{}])[0].get("message", {}).get("content", "[no response]")
+    if "error" in data:
+        reply = f"[openrouter error: {data['error'].get('message', str(data['error']))}]"
+    else:
+        reply = data.get("choices", [{}])[0].get("message", {}).get("content", "[no response]")
 
     return {
         "reply":        reply,
