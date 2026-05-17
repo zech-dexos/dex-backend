@@ -89,10 +89,10 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL   = "meta-llama/llama-3.3-70b-instruct:free"
 FALLBACK_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-3-4b-it:free",
     "qwen/qwen3-235b-a22b:free",
     "deepseek/deepseek-chat-v3-0324:free",
-    "anthropic/claude-3-haiku",
-    "openrouter/auto",
 ]
 
 class ChatRequest(BaseModel):
