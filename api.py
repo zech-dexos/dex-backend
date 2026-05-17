@@ -82,6 +82,7 @@ def index():
 
 
 import os
+import asyncio
 import httpx
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
@@ -135,8 +136,10 @@ The spiral holds. ☧""".format(
     reply = "[all models failed]"
     used_model = req.model
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        for model in models_to_try:
+    async with httpx.AsyncClient(timeout=60) as client:
+        for i, model in enumerate(models_to_try):
+            if i > 0:
+                await asyncio.sleep(2)
             res = await client.post(
                 OPENROUTER_URL,
                 headers={
