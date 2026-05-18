@@ -1052,6 +1052,14 @@ document.addEventListener('visibilitychange', () => {
     setState(STATES.IDLE);
   }
 });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (recognition) try { recognition.stop(); } catch(e) {}
+    synthesis.cancel();
+    setState(STATES.IDLE);
+  }
+});
 // Preload voices
 if (synthesis.onvoiceschanged !== undefined) {
   synthesis.onvoiceschanged = () => synthesis.getVoices();
