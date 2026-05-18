@@ -892,15 +892,19 @@ async function sendToHaven(userText, contextOverride) {
 
     lastHavenMsg = reply;
     history.push({ role: 'assistant', content: reply });
-
     addMsg('haven', reply);
     checkEmergency(reply);
-    speak(reply);
+    // Never speak error messages
+    if (!reply.startsWith('[')) {
+      speak(reply);
+    } else {
+      setState(STATES.IDLE);
+    }
 
   } catch(err) {
     const fallback = "I'm having a little trouble right now. Please try again in a moment.";
     addMsg('haven', fallback);
-    speak(fallback);
+    setState(STATES.IDLE);
     setState(STATES.IDLE);
   }
 }
@@ -1039,6 +1043,15 @@ async function sendImageToHaven(dataUrl) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
+
+// Pause when screen off or face down
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (recognition) try { recognition.stop(); } catch(e) {}
+    synthesis.cancel();
+    setState(STATES.IDLE);
+  }
+});
 // Preload voices
 if (synthesis.onvoiceschanged !== undefined) {
   synthesis.onvoiceschanged = () => synthesis.getVoices();
