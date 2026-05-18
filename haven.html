@@ -1037,7 +1037,7 @@ async function sendImageToHaven(dataUrl) {
   } catch(err) {
     const fallback = "I'm having trouble reading that image right now. Please try again.";
     addMsg('haven', fallback);
-    speak(fallback);
+    setState(STATES.IDLE);
     setState(STATES.IDLE);
   }
 }
@@ -1045,13 +1045,6 @@ async function sendImageToHaven(dataUrl) {
 // ── INIT ──────────────────────────────────────────────────────────────────
 
 // Pause when screen off or face down
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    if (recognition) try { recognition.stop(); } catch(e) {}
-    synthesis.cancel();
-    setState(STATES.IDLE);
-  }
-});
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
