@@ -1027,7 +1027,9 @@ async function sendImageToHaven(dataUrl) {
     });
 
     const data  = await res.json();
-    const reply = data.reply || "I had trouble reading that. Could you try again with better lighting?";
+    const reply = (data.reply && !data.reply.startsWith('['))
+      ? data.reply
+      : "I'm having a little trouble connecting right now. Please try again in a moment.";
 
     lastHavenMsg = reply;
     history.push({ role: 'assistant', content: reply });
