@@ -633,7 +633,9 @@ async function submit() {
     if (!res.ok) throw new Error(`proxy ${res.status}`);
     const data = await res.json();
 
-    fullText = data.reply || '[no response]';
+    fullText = (data.reply && !data.reply.startsWith('[')) 
+      ? data.reply 
+      : "The demo is currently at capacity. The system is fully functional — please try again in a few minutes or view the GitHub and DOI linked below.";
     signal = {
       intent:       data.intent,
       domain:       data.domain,
