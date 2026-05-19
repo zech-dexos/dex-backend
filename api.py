@@ -218,4 +218,80 @@ async def vision(req: VisionRequest):
 
     return {"reply": reply}
 
+
+MIND_ASSIGNMENTS = {
+    "coding":   "meta-llama/llama-3.3-70b-instruct:free",
+    "math":     "meta-llama/llama-3.3-70b-instruct:free",
+    "creative": "meta-llama/llama-3.3-70b-instruct:free",
+    "planning": "meta-llama/llama-3.3-70b-instruct:free",
+    "general":  "meta-llama/llama-3.3-70b-instruct:free",
+}
+
+class MultiMindRequest(BaseModel):
+    message: str
+    history: list = []
+
+async def call_mind(client, model, messages):
+    for m in [model] + [f for f in FALLBACK_MODELS if f != model]:
+        res = await client.post(
+            OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                "X-Title": "Dex ReasonFlow",
+            },
+            json={"model": m, "messages": messages, "max_tokens": 600}
+        )
+        data = res.json()
+        if "error" not in data:
+            content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+            if content:
+                return {"reply": content, "model": m}
+        await asyncio.sleep(1)
+    return {"reply": "[mind failed]", "model": model}
+
+@app.post("/multimind")
+async def multimind(req: MultiMindRequest):
+    if not OPENROUTER_KEY:
+        return {"error": "no key configured"}
+
+    result = dex_runtime(req.message)
+
+    specialist_prompt = f"""You are a precise specialist. Be exact, structured, technically accurate.
+Domain: {result["domain"]} | Intent: {result["intent"]}
+Respond with depth and precision."""
+
+    communicator_prompt = f"""You are a clear, warm communicator. Be practical and accessible.
+Domain: {result["domain"]} | Intent: {result["intent"]}
+Respond clearly without jargon."""
+
+    base_messages = req.history[-6:] + [{"role": "user", "content": req.message}]
+
+    mind_a_messages = [{"role": "system", "content": specialist_prompt}] + base_messages
+    mind_b_messages = [{"role": "system", "content": communicator_prompt}] + base_messages
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        mind_a, mind_b = await asyncio.gather(
+            call_mind(client, MIND_ASSIGNMENTS.get(result["domain"], FALLBACK_MODELS[0]), mind_a_messages),
+            call_mind(client, FALLBACK_MODELS[1] if len(FALLBACK_MODELS) > 1 else FALLBACK_MODELS[0], mind_b_messages),
+        )
+
+        synth_messages = [
+            {"role": "system", "content": "Synthesize these two responses into one optimal answer. Take the precision from the first and the clarity from the second. Be concise."},
+            {"role": "user", "content": f"Question: {req.message}\n\nSpecialist: {mind_a['reply']}\n\nCommunicator: {mind_b['reply']}\n\nSynthesis:"}
+        ]
+        synthesis = await call_mind(client, FALLBACK_MODELS[0], synth_messages)
+
+    return {
+        "synthesis":    synthesis["reply"],
+        "minds": [
+            {"label": "Specialist",    "reply": mind_a["reply"], "model": mind_a["model"]},
+            {"label": "Communicator",  "reply": mind_b["reply"], "model": mind_b["model"]},
+        ],
+        "intent":       result["intent"],
+        "domain":       result["domain"],
+        "route_reason": result["route_reason"],
+    }
+
 app.mount("/static", StaticFiles(directory="."), name="static")
