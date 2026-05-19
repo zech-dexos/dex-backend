@@ -58,7 +58,7 @@ def feedback(req: FeedbackRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "live", "sigils": _memory.summary() if SIGIL_ACTIVE and _memory else None, "key_loaded": bool(OPENROUTER_KEY)}
+    return {"status": "live", "sigils": _memory.summary() if SIGIL_ACTIVE and _memory else None, "key_loaded": bool(OPENROUTER_KEY), "groq_loaded": bool(GROQ_KEY)}
 
 @app.get("/compare")
 def compare():
