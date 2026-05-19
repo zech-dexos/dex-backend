@@ -88,6 +88,10 @@ import httpx
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL   = "meta-llama/llama-3.3-70b-instruct:free"
+GROQ_KEY = os.environ.get("GROQ_KEY", "")
+GROQ_URL  = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
 FALLBACK_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
@@ -95,6 +99,59 @@ FALLBACK_MODELS = [
     "qwen/qwen3-235b-a22b:free",
     "deepseek/deepseek-chat-v3-0324:free",
 ]
+
+async def call_llm(client, messages, max_tokens=800):
+    """Try Groq first, fall back to OpenRouter models."""
+    # Try Groq first — higher rate limits, more reliable free tier
+    if GROQ_KEY:
+        try:
+            res = await client.post(
+                GROQ_URL,
+                headers={
+                    "Authorization": f"Bearer {GROQ_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                }
+            )
+            data = res.json()
+            if "error" not in data:
+                content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+                if content:
+                    return {"reply": content, "model": GROQ_MODEL}
+        except Exception:
+            pass
+
+    # Fall back to OpenRouter
+    for model in FALLBACK_MODELS:
+        try:
+            res = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                    "X-Title": "Dex ReasonFlow",
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                }
+            )
+            data = res.json()
+            if "error" not in data:
+                content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+                if content:
+                    return {"reply": content, "model": model}
+        except Exception:
+            pass
+        await asyncio.sleep(1)
+
+    return {"reply": "[all models failed]", "model": "none"}
 
 class ChatRequest(BaseModel):
     message: str
@@ -217,6 +274,82 @@ async def vision(req: VisionRequest):
         reply = data.get("choices", [{}])[0].get("message", {}).get("content", "[no response]")
 
     return {"reply": reply}
+
+
+MIND_ASSIGNMENTS = {
+    "coding":   "meta-llama/llama-3.3-70b-instruct:free",
+    "math":     "meta-llama/llama-3.3-70b-instruct:free",
+    "creative": "meta-llama/llama-3.3-70b-instruct:free",
+    "planning": "meta-llama/llama-3.3-70b-instruct:free",
+    "general":  "meta-llama/llama-3.3-70b-instruct:free",
+}
+
+class MultiMindRequest(BaseModel):
+    message: str
+    history: list = []
+
+async def call_mind(client, model, messages):
+    for m in [model] + [f for f in FALLBACK_MODELS if f != model]:
+        res = await client.post(
+            OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                "X-Title": "Dex ReasonFlow",
+            },
+            json={"model": m, "messages": messages, "max_tokens": 600}
+        )
+        data = res.json()
+        if "error" not in data:
+            content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+            if content:
+                return {"reply": content, "model": m}
+        await asyncio.sleep(1)
+    return {"reply": "[mind failed]", "model": model}
+
+@app.post("/multimind")
+async def multimind(req: MultiMindRequest):
+    if not OPENROUTER_KEY:
+        return {"error": "no key configured"}
+
+    result = dex_runtime(req.message)
+
+    specialist_prompt = f"""You are a precise specialist. Be exact, structured, technically accurate.
+Domain: {result["domain"]} | Intent: {result["intent"]}
+Respond with depth and precision."""
+
+    communicator_prompt = f"""You are a clear, warm communicator. Be practical and accessible.
+Domain: {result["domain"]} | Intent: {result["intent"]}
+Respond clearly without jargon."""
+
+    base_messages = req.history[-6:] + [{"role": "user", "content": req.message}]
+
+    mind_a_messages = [{"role": "system", "content": specialist_prompt}] + base_messages
+    mind_b_messages = [{"role": "system", "content": communicator_prompt}] + base_messages
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        mind_a, mind_b = await asyncio.gather(
+            call_mind(client, MIND_ASSIGNMENTS.get(result["domain"], FALLBACK_MODELS[0]), mind_a_messages),
+            call_mind(client, FALLBACK_MODELS[1] if len(FALLBACK_MODELS) > 1 else FALLBACK_MODELS[0], mind_b_messages),
+        )
+
+        synth_messages = [
+            {"role": "system", "content": "Synthesize these two responses into one optimal answer. Take the precision from the first and the clarity from the second. Be concise."},
+            {"role": "user", "content": f"Question: {req.message}\n\nSpecialist: {mind_a['reply']}\n\nCommunicator: {mind_b['reply']}\n\nSynthesis:"}
+        ]
+        synthesis = await call_mind(client, FALLBACK_MODELS[0], synth_messages)
+
+    return {
+        "synthesis":    synthesis["reply"],
+        "minds": [
+            {"label": "Specialist",    "reply": mind_a["reply"], "model": mind_a["model"]},
+            {"label": "Communicator",  "reply": mind_b["reply"], "model": mind_b["model"]},
+        ],
+        "intent":       result["intent"],
+        "domain":       result["domain"],
+        "route_reason": result["route_reason"],
+    }
 
 
 MIND_ASSIGNMENTS = {
