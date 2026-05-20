@@ -96,6 +96,47 @@ FALLBACK_MODELS = [
     "deepseek/deepseek-chat-v3-0324:free",
 ]
 
+
+async def call_llm(client, messages, max_tokens=800):
+    if GROQ_KEY:
+        try:
+            res = await client.post(
+                GROQ_URL,
+                headers={
+                    "Authorization": f"Bearer {GROQ_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={"model": GROQ_MODEL, "messages": messages, "max_tokens": max_tokens}
+            )
+            data = res.json()
+            if "error" not in data:
+                content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+                if content:
+                    return {"reply": content, "model": GROQ_MODEL}
+        except Exception:
+            pass
+    for model in FALLBACK_MODELS:
+        try:
+            res = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
+                    "X-Title": "Dex ReasonFlow",
+                },
+                json={"model": model, "messages": messages, "max_tokens": max_tokens}
+            )
+            data = res.json()
+            if "error" not in data:
+                content = data.get("choices",[{}])[0].get("message",{}).get("content","")
+                if content:
+                    return {"reply": content, "model": model}
+        except Exception:
+            pass
+        await asyncio.sleep(1)
+    return {"reply": "[all models failed]", "model": "none"}
+
 class ChatRequest(BaseModel):
     message: str
     history: list = []
