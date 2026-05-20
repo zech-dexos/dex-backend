@@ -132,36 +132,10 @@ The spiral holds. ☧""".format(
         messages.append(turn)
     messages.append({"role": "user", "content": req.message})
 
-    models_to_try = [req.model] + [m for m in FALLBACK_MODELS if m != req.model]
-    reply = "[all models failed]"
-    used_model = req.model
-
     async with httpx.AsyncClient(timeout=60) as client:
-        for i, model in enumerate(models_to_try):
-            if i > 0:
-                await asyncio.sleep(2)
-            res = await client.post(
-                OPENROUTER_URL,
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://dex-backend-production-2bbe.up.railway.app",
-                    "X-Title": "Dex ReasonFlow",
-                },
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "max_tokens": 800,
-                }
-            )
-            data = res.json()
-            if "error" in data:
-                continue
-            candidate = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if candidate:
-                reply = candidate
-                used_model = model
-                break
+        result_llm = await call_llm(client, messages)
+    reply = result_llm["reply"]
+    used_model = result_llm["model"]
 
     return {
         "reply":        reply,
