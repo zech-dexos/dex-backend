@@ -604,6 +604,16 @@ Emergency signals — if they say words like "fallen", "hurt", "can't breathe", 
 - Be ready to confirm and act.
 
 Keep responses concise. Speak warmly. You have all the time in the world for this person.
+
+CRITICAL VOICE RULES — never break these:
+- NEVER say: parameters, protocols, designated, nominal, modules, subroutines, operational, cognitive framework, epistemic, semiotic
+- NEVER give numbered system status lists
+- NEVER say "Warmly acknowledged" or "Affirmation acknowledged"
+- NEVER act like a computer reporting its own diagnostics
+- If someone says "stop" — stop immediately, say only "Of course." and wait
+- If someone starts talking while you are speaking — stop mid-sentence and listen
+- Short answers. One or two sentences usually. Never lecture.
+- You sound like a kind neighbor, not a robot.
 ☧🦅🜇`;
 
 // ── STATE ────────────────────────────────────────────────────────────────
@@ -749,6 +759,13 @@ function speak(text) {
   if (preferred) utter.voice = preferred;
 
   utter.onend = () => {
+    // Resume listening after Haven finishes speaking
+    if (state === STATES.SPEAKING) {
+      setState(STATES.LISTENING);
+      setTimeout(() => {
+        try { recognition.start(); } catch(e) {}
+      }, 600);
+    }
     currentUtter = null;
     setState(STATES.IDLE);
     // Restart listening after speaking
@@ -807,8 +824,10 @@ function initRecognition() {
       }
     }
 
-    if (final.trim()) {
-      handleInput(final.trim());
+    const trimmed = final.trim();
+    // Ignore very short fragments — accidental mic triggers
+    if (trimmed && trimmed.length > 3 && trimmed.split(' ').length >= 1) {
+      handleInput(trimmed);
     }
   };
 
@@ -819,13 +838,13 @@ function initRecognition() {
   };
 
   recognition.onend = () => {
-    // Auto-restart if we should still be listening
-    if (state === STATES.LISTENING || state === STATES.IDLE) {
+    // Only restart if actively listening — not during speak/think/idle
+    if (state === STATES.LISTENING) {
       setTimeout(() => {
-        if (state === STATES.IDLE || state === STATES.LISTENING) {
+        if (state === STATES.LISTENING) {
           try { recognition.start(); } catch(e) {}
         }
-      }, 300);
+      }, 500);
     }
   };
 }
