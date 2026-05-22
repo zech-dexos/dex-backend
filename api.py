@@ -88,16 +88,17 @@ import httpx
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL   = "meta-llama/llama-3.3-70b-instruct:free"
+DEFAULT_MODEL   = "google/gemma-4-31b-it:free"
 GROQ_KEY = os.environ.get("GROQ_KEY", "")
 GROQ_URL  = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 FALLBACK_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
-    "google/gemma-3-4b-it:free",
-    "qwen/qwen3-235b-a22b:free",
-    "deepseek/deepseek-chat-v3-0324:free",
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "deepseek/deepseek-v4-flash:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "liquid/lfm-2.5-1.2b-instruct:free",
 ]
 
 
