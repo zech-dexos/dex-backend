@@ -751,12 +751,29 @@ function speak(text) {
   utter.pitch = 1.0;
   utter.volume = 1.0;
 
-  // Try to pick a warm English voice
+  // Pick the warmest available voice — prioritize by quality
   const voices = synthesis.getVoices();
-  const preferred = voices.find(v =>
-    v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Moira'))
-  ) || voices.find(v => v.lang.startsWith('en'));
+  const voicePriority = [
+    'Google UK English Female',
+    'Google US English',
+    'Microsoft Zira',
+    'Microsoft Jenny',
+    'Samantha',
+    'Karen',
+    'Moira',
+    'Tessa',
+    'Fiona',
+  ];
+  let preferred = null;
+  for (const name of voicePriority) {
+    preferred = voices.find(v => v.name.includes(name));
+    if (preferred) break;
+  }
+  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en-') && !v.name.includes('Male'));
+  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en'));
   if (preferred) utter.voice = preferred;
+  utter.rate  = 0.85;
+  utter.pitch = 1.05;
 
   utter.onend = () => {
     // Resume listening after Haven finishes speaking
