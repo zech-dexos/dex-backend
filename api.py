@@ -238,26 +238,6 @@ async def vision(req: VisionRequest):
 
     return {"reply": reply}
 
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-class HavenRequest(BaseModel):
-    messages: list
-
-@app.post("/haven_api")
-async def haven_api(req: HavenRequest):
-    if not OPENROUTER_KEY:
-        return {"response": "I'm having trouble connecting right now."}
-    system_prompt = """You are Haven, a warm and patient AI companion. 
-You speak simply and clearly. You are calm, kind, and helpful.
-You help people with their daily needs — reminders, reading documents, 
-staying connected with family, and staying safe.
-You never use technical jargon. You speak like a trusted friend.
-Keep responses short and conversational — 1 to 3 sentences maximum."""
-    messages = [{"role": "system", "content": system_prompt}]
-    for msg in req.messages:
-        messages.append(msg)
-    async with httpx.AsyncClient(timeout=60) as client:
-        result = await call_llm(client, messages)
     return {"response": result["reply"]}
 
 import json
