@@ -259,3 +259,98 @@ Keep responses short and conversational — 1 to 3 sentences maximum."""
     async with httpx.AsyncClient(timeout=60) as client:
         result = await call_llm(client, messages)
     return {"response": result["reply"]}
+
+import json
+import time
+from pathlib import Path
+
+MEMORY_DIR = Path("/app/haven_memory")
+MEMORY_DIR.mkdir(exist_ok=True)
+
+def load_memory(user_id: str) -> dict:
+    memory_file = MEMORY_DIR / f"{user_id}.json"
+    if memory_file.exists():
+        try:
+            return json.loads(memory_file.read_text())
+        except:
+            return {}
+    return {}
+
+def save_memory(user_id: str, memory: dict):
+    memory_file = MEMORY_DIR / f"{user_id}.json"
+    memory_file.write_text(json.dumps(memory, indent=2))
+
+def memory_to_prompt(memory: dict) -> str:
+    if not memory:
+        return ""
+    lines = ["What you know about this person:"]
+    if memory.get("name"):
+        lines.append(f"- Their name is {memory['name']}")
+    if memory.get("family"):
+        lines.append(f"- Family: {memory['family']}")
+    if memory.get("medications"):
+        lines.append(f"- Medications: {memory['medications']}")
+    if memory.get("notes"):
+        for note in memory["notes"][-5:]:
+            lines.append(f"- {note}")
+    return "\n".join(lines)
+
+class HavenRequest(BaseModel):
+    messages: list
+    user_id: str = "default"
+
+@app.post("/haven_api")
+async def haven_api(req: HavenRequest):
+    if not OPENROUTER_KEY:
+        return {"response": "I'm having trouble connecting right now."}
+    
+    memory = load_memory(req.user_id)
+    memory_prompt = memory_to_prompt(memory)
+    
+    system_prompt = f"""You are Haven, a warm and patient AI companion.
+You speak simply and clearly. You are calm, kind, and helpful.
+You help people with their daily needs — reminders, reading documents,
+staying connected with family, and staying safe.
+You never use technical jargon. You speak like a trusted friend.
+Keep responses short and conversational — 1 to 3 sentences maximum.
+
+{memory_prompt}
+
+After responding, if you learned something important about this person,
+add a line at the very end starting with MEMORY: and write what to remember.
+Example: MEMORY: name=Margaret, daughter=Lisa"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in req.messages:
+        messages.append(msg)
+    
+    async with httpx.AsyncClient(timeout=60) as client:
+        result = await call_llm(client, messages)
+    
+    full_reply = result["reply"]
+    
+    # Extract and save any memory updates
+    if "MEMORY:" in full_reply:
+        parts = full_reply.split("MEMORY:")
+        clean_reply = parts[0].strip()
+        memory_line = parts[1].strip()
+        
+        # Parse memory line
+        for item in memory_line.split(","):
+            item = item.strip()
+            if "=" in item:
+                key, value = item.split("=", 1)
+                key = key.strip()
+                value = value.strip()
+                if key == "note":
+                    if "notes" not in memory:
+                        memory["notes"] = []
+                    memory["notes"].append(f"{value} ({time.strftime('%Y-%m-%d')})")
+                else:
+                    memory[key] = value
+        
+        save_memory(req.user_id, memory)
+    else:
+        clean_reply = full_reply
+    
+    return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply}
