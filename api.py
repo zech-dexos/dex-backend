@@ -364,3 +364,10 @@ async def haven_tts(req: dict):
             return Response(content=response.content, media_type="audio/mpeg")
         else:
             return {"error": f"ElevenLabs error {response.status_code}"}
+
+@app.get("/debug_eleven")
+async def debug_eleven():
+    key = ELEVENLABS_KEY
+    if not key:
+        return {"status": "no key found"}
+    return {"status": "key loaded", "preview": key[:8] + "..."}
