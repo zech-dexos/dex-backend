@@ -334,3 +334,33 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
         clean_reply = full_reply
     
     return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply}
+
+ELEVENLABS_KEY = os.environ.get("ELEVENLABS_KEY", "")
+ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"  # Rachel — warm, clear
+
+@app.post("/haven_tts")
+async def haven_tts(req: dict):
+    text = req.get("text", "")
+    if not text or not ELEVENLABS_KEY:
+        return {"error": "no text or key"}
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}",
+            headers={
+                "xi-api-key": ELEVENLABS_KEY,
+                "Content-Type": "application/json"
+            },
+            json={
+                "text": text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75
+                }
+            }
+        )
+        if response.status_code == 200:
+            from fastapi.responses import Response
+            return Response(content=response.content, media_type="audio/mpeg")
+        else:
+            return {"error": f"ElevenLabs error {response.status_code}"}
