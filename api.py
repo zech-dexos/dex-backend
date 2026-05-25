@@ -360,7 +360,7 @@ async def haven_tts(req: dict):
             }
         )
         if response.status_code == 200:
-            from fastapi.responses import Response
+            from fastapi.responses import Response, StreamingResponse
             return Response(content=response.content, media_type="audio/mpeg")
         else:
             return {"error": f"ElevenLabs error {response.status_code}"}
@@ -371,3 +371,17 @@ async def debug_eleven():
     if not key:
         return {"status": "no key found"}
     return {"status": "key loaded", "preview": key[:8] + "..."}
+
+from gtts import gTTS
+import io
+
+@app.post("/haven_tts_free")
+async def haven_tts_free(req: dict):
+    text = req.get("text", "")
+    if not text:
+        return {"error": "no text"}
+    tts = gTTS(text=text, lang='en', slow=False)
+    mp3_fp = io.BytesIO()
+    tts.write_to_fp(mp3_fp)
+    mp3_fp.seek(0)
+    return StreamingResponse(mp3_fp, media_type="audio/mpeg")
