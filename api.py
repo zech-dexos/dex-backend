@@ -228,7 +228,7 @@ async def vision(req: VisionRequest):
                 "X-Title": "Haven by DexOS",
             },
             json={
-                "model": "google/gemini-flash-1.5-8b",
+                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
                 "messages": messages,
                 "max_tokens": 800,
             }
