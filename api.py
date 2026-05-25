@@ -400,3 +400,87 @@ async def haven_tts_free(req: dict):
     tts.write_to_fp(mp3_fp)
     mp3_fp.seek(0)
     return StreamingResponse(mp3_fp, media_type="audio/mpeg")
+
+# ─── HAVEN CONTACT SYSTEM ────────────────────────────────────────────────────
+import re
+
+def load_contacts(user_id: str) -> list:
+    f = MEMORY_DIR / f"{user_id}_contacts.json"
+    if f.exists():
+        try:
+            return json.loads(f.read_text())
+        except:
+            return []
+    return []
+
+def save_contacts(user_id: str, contacts: list):
+    MEMORY_DIR.mkdir(exist_ok=True)
+    f = MEMORY_DIR / f"{user_id}_contacts.json"
+    f.write_text(json.dumps(contacts, indent=2))
+
+def _slugify(name: str, rel: str) -> str:
+    return re.sub(r"[^a-z0-9_]", "", f"{name}_{rel}".lower())
+
+def parse_contact_from_text(text: str):
+    m = re.search(r"(\d[\d\s\-\(\)\.]{6,14}\d)", text)
+    if not m:
+        return None
+    phone = re.sub(r"\D", "", m.group(1))
+    if len(phone) < 7:
+        return None
+    rels = ["daughter","son","wife","husband","sister","brother","mother",
+            "father","caregiver","doctor","friend","neighbor","granddaughter","grandson"]
+    rel = "contact"
+    for r in rels:
+        if r in text.lower():
+            rel = r
+            break
+    nm = re.search(r"\b([A-Z][a-z]+)\b", text)
+    name = nm.group(1) if nm else "Unknown"
+    return {"id": _slugify(name, rel), "name": name, "relationship": rel, "phone": phone, "notes": ""}
+
+class ContactAddRequest(BaseModel):
+    user_id: str = "default"
+    contact: dict
+
+class ContactParseRequest(BaseModel):
+    text: str
+    user_id: str = "default"
+
+@app.get("/haven_contacts")
+def get_contacts(user_id: str = "default"):
+    contacts = load_contacts(user_id)
+    return {"contacts": contacts, "count": len(contacts)}
+
+@app.post("/haven_contacts")
+def add_contact(req: ContactAddRequest):
+    c = req.contact
+    if not c.get("phone"):
+        return {"error": "phone required"}
+    if not c.get("id"):
+        c["id"] = _slugify(c.get("name","contact"), c.get("relationship","contact"))
+    contacts = load_contacts(req.user_id)
+    existing_ids = [x["id"] for x in contacts]
+    if c["id"] in existing_ids:
+        contacts = [c if x["id"] == c["id"] else x for x in contacts]
+    else:
+        contacts.append(c)
+    save_contacts(req.user_id, contacts)
+    return {"status": "saved", "contact": c}
+
+@app.delete("/haven_contacts/{contact_id}")
+def delete_contact(contact_id: str, user_id: str = "default"):
+    contacts = [x for x in load_contacts(user_id) if x["id"] != contact_id]
+    save_contacts(user_id, contacts)
+    return {"status": "deleted"}
+
+@app.post("/haven_contacts/parse")
+def parse_contact_endpoint(req: ContactParseRequest):
+    contact = parse_contact_from_text(req.text)
+    if not contact:
+        return {"status": "not_found", "contact": None}
+    contacts = load_contacts(req.user_id)
+    if contact["id"] not in [x["id"] for x in contacts]:
+        contacts.append(contact)
+        save_contacts(req.user_id, contacts)
+    return {"status": "saved", "contact": contact}
