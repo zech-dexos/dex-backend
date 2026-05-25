@@ -1,3 +1,7 @@
+from gtts import gTTS
+import io
+from fastapi.responses import StreamingResponse
+
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -374,6 +378,17 @@ async def debug_eleven():
 
 from gtts import gTTS
 import io
+
+@app.post("/haven_tts_free")
+async def haven_tts_free(req: dict):
+    text = req.get("text", "")
+    if not text:
+        return {"error": "no text"}
+    tts = gTTS(text=text, lang='en', slow=False)
+    mp3_fp = io.BytesIO()
+    tts.write_to_fp(mp3_fp)
+    mp3_fp.seek(0)
+    return StreamingResponse(mp3_fp, media_type="audio/mpeg")
 
 @app.post("/haven_tts_free")
 async def haven_tts_free(req: dict):
