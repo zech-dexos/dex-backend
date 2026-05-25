@@ -228,7 +228,7 @@ async def vision(req: VisionRequest):
                 "X-Title": "Haven by DexOS",
             },
             json={
-                "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
+                "model": "qwen/qwen2-vl-7b-instruct:free",
                 "messages": messages,
                 "max_tokens": 800,
             }
