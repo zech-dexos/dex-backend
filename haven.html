@@ -776,17 +776,9 @@ function speak(text) {
   utter.pitch = 1.05;
 
   utter.onend = () => {
-    // Resume listening after Haven finishes speaking
-    if (state === STATES.SPEAKING) {
-      setState(STATES.LISTENING);
-      setTimeout(() => {
-        try { recognition.start(); } catch(e) {}
-      }, 600);
-    }
     currentUtter = null;
     setState(STATES.IDLE);
-    // Restart listening after speaking
-    startListening();
+    setTimeout(() => startListening(), 600);
   };
 
   utter.onerror = () => {
