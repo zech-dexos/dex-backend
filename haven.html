@@ -825,12 +825,14 @@ function initRecognition() {
 
     // INTERRUPT — if Haven is speaking and elder speaks
     if (state === STATES.SPEAKING && (interim || final)) {
-      const spoken = (final || interim).trim();
-      const wordCount = spoken.split(' ').filter(w => w.length > 0).length;
-      if (spoken.length > 6 && wordCount >= 2) {
-        stopSpeaking();
-        handleInterruption(spoken);
-        return;
+      if (final) {
+        const spoken = final.trim();
+        const wordCount = spoken.split(' ').filter(w => w.length > 0).length;
+        if (spoken.length > 8 && wordCount >= 2) {
+          stopSpeaking();
+          handleInterruption(spoken);
+          return;
+        }
       }
     }
 
