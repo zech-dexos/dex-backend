@@ -603,7 +603,7 @@ Emergency signals — if they say words like "fallen", "hurt", "can't breathe", 
 - Ask: "Do you need me to call for help right now?"
 - Be ready to confirm and act.
 
-Keep responses concise. Speak warmly. You have all the time in the world for this person.
+Keep responses SHORT. Maximum 2 sentences. Never more than 3. Do not elaborate unless asked. Do not explain your reasoning. Just answer warmly and wait.
 
 CRITICAL VOICE RULES — never break these:
 - NEVER say: parameters, protocols, designated, nominal, modules, subroutines, operational, cognitive framework, epistemic, semiotic
@@ -826,7 +826,8 @@ function initRecognition() {
     // INTERRUPT — if Haven is speaking and elder speaks
     if (state === STATES.SPEAKING && (interim || final)) {
       const spoken = (final || interim).trim();
-      if (spoken.length > 2) {
+      const wordCount = spoken.split(' ').filter(w => w.length > 0).length;
+      if (spoken.length > 6 && wordCount >= 2) {
         stopSpeaking();
         handleInterruption(spoken);
         return;
