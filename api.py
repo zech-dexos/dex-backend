@@ -151,6 +151,7 @@ class ChatRequest(BaseModel):
     history: list = []
     model: str = DEFAULT_MODEL
     system: str = ""
+    system: str = ""
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
