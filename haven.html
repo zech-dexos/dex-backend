@@ -570,7 +570,8 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
-const CHAT_URL   = 'https://dex-backend-production-2bbe.up.railway.app/chat';
+const CHAT_URL    = 'https://dex-backend-production-2bbe.up.railway.app/chat';
+const PROFILE_URL = 'https://dex-backend-production-2bbe.up.railway.app/haven_profile';
 const VISION_URL = 'https://dex-backend-production-2bbe.up.railway.app/vision';
 
 // ── HAVEN SYSTEM PROMPT ─────────────────────────────────────────────────
@@ -671,6 +672,12 @@ elWakeBtn.addEventListener('click', () => {
   if (nameInput && nameInput.value.trim()) {
     userName = nameInput.value.trim();
     localStorage.setItem('haven_user_name', userName);
+    // Save to backend — persists across all devices and browser resets
+    fetch(PROFILE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, name: userName })
+    }).catch(() => {});
   }
   elWake.style.display = 'none';
   startSession();
@@ -1120,6 +1127,21 @@ document.addEventListener('visibilitychange', () => {
     setState(STATES.IDLE);
   }
 });
+// Load profile from backend on start
+async function loadProfile() {
+  try {
+    const res = await fetch(`${PROFILE_URL}?user_id=${userId}`);
+    const data = await res.json();
+    if (data.name) {
+      userName = data.name;
+      localStorage.setItem('haven_user_name', userName);
+      const nameInput = document.getElementById('wake-name-input');
+      if (nameInput) nameInput.value = userName;
+    }
+  } catch(e) {}
+}
+loadProfile();
+
 // Preload voices
 if (synthesis.onvoiceschanged !== undefined) {
   synthesis.onvoiceschanged = () => synthesis.getVoices();

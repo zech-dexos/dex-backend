@@ -485,3 +485,26 @@ def parse_contact_endpoint(req: ContactParseRequest):
         contacts.append(contact)
         save_contacts(req.user_id, contacts)
     return {"status": "saved", "contact": contact}
+
+class ProfileRequest(BaseModel):
+    user_id: str = "default"
+    name: str = ""
+    preferences: dict = {}
+
+@app.post("/haven_profile")
+async def save_profile(req: ProfileRequest):
+    memory = load_memory(req.user_id)
+    if req.name:
+        memory["profile_name"] = req.name
+    if req.preferences:
+        memory["preferences"] = req.preferences
+    save_memory(req.user_id, memory)
+    return {"status": "saved", "name": memory.get("profile_name", "")}
+
+@app.get("/haven_profile")
+async def get_profile(user_id: str = "default"):
+    memory = load_memory(user_id)
+    return {
+        "name": memory.get("profile_name", ""),
+        "preferences": memory.get("preferences", {})
+    }
