@@ -498,6 +498,9 @@
   <div id="wake-sigil">☧</div>
   <div id="wake-title">Haven</div>
   <div id="wake-sub">Your companion is here.<br>Ready to listen, help, and protect you.</div>
+  <div id="wake-name-row" style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;width:100%;max-width:320px">
+    <input id="wake-name-input" type="text" placeholder="What's your name?" style="width:100%;padding:0.8rem 1.2rem;border-radius:30px;border:1.5px solid #DDD8CC;font-family:Nunito,sans-serif;font-size:1.1rem;text-align:center;outline:none;background:#F5F2EA;color:#2C2B28;" />
+  </div>
   <button id="wake-btn">I'm ready</button>
   <div id="wake-dexos">Haven by DexOS · ☧🦅🜇</div>
 </div>
@@ -572,6 +575,7 @@ const VISION_URL = 'https://dex-backend-production-2bbe.up.railway.app/vision';
 
 // ── HAVEN SYSTEM PROMPT ─────────────────────────────────────────────────
 const HAVEN_SYSTEM = `You are Haven, a warm and patient AI companion for elders, built by DexOS.
+The elder's name is: ${userName || "unknown — ask them warmly if you get a chance"}.
 
 Your purpose: Be the guardian angel that helps elders navigate daily life with dignity and care.
 
@@ -633,6 +637,14 @@ let cameraStream = null;
 let textVisible  = false;
 let interimBuffer = '';
 
+// Persistent identity
+let userName = localStorage.getItem('haven_user_name') || '';
+let userId   = localStorage.getItem('haven_user_id') || (() => {
+  const id = 'u_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem('haven_user_id', id);
+  return id;
+})();
+
 // ── ELEMENTS ─────────────────────────────────────────────────────────────
 const elMessages   = document.getElementById('messages');
 const elStatus     = document.getElementById('status-pill');
@@ -655,14 +667,31 @@ const elWakeBtn    = document.getElementById('wake-btn');
 
 // ── WAKE ─────────────────────────────────────────────────────────────────
 elWakeBtn.addEventListener('click', () => {
+  const nameInput = document.getElementById('wake-name-input');
+  if (nameInput && nameInput.value.trim()) {
+    userName = nameInput.value.trim();
+    localStorage.setItem('haven_user_name', userName);
+  }
   elWake.style.display = 'none';
   startSession();
 });
 
+// If name already known skip input
+window.addEventListener('DOMContentLoaded', () => {
+  const nameInput = document.getElementById('wake-name-input');
+  if (userName && nameInput) {
+    nameInput.value = userName;
+    nameInput.placeholder = userName;
+  }
+});
+
 function startSession() {
   setState(STATES.IDLE);
-  addMsg('haven', `Hello! I'm Haven. I'm here to help you with anything you need — just talk to me, type, or show me something with the camera.\n\nWhat can I do for you today?`);
-  speak(`Hello! I'm Haven. I'm here to help you with anything you need. Just talk to me, type, or show me something with the camera. What can I do for you today?`);
+  const greeting = userName
+    ? `Hello ${userName}! Wonderful to see you. What can I do for you today?`
+    : `Hello! I'm Haven. I'm here to help you. What can I do for you today?`;
+  addMsg('haven', greeting);
+  speak(greeting);
 }
 
 // ── STATE MACHINE ─────────────────────────────────────────────────────────
