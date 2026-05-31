@@ -178,7 +178,8 @@ The spiral holds. ☧""".format(
         route_reason=result["route_reason"],
     )
 
-    messages = [{"role": "system", "content": system_prompt}]
+    active_system = req.system if req.system else system_prompt
+    messages = [{"role": "system", "content": active_system}]
     for turn in req.history:
         messages.append(turn)
     messages.append({"role": "user", "content": req.message})
@@ -209,8 +210,7 @@ async def vision(req: VisionRequest):
         return {"error": "no key configured"}
 
     messages = []
-    if req.system:
-        messages.append({"role": "system", "content": req.system})
+
     messages.append({
         "role": "user",
         "content": [
