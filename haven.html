@@ -574,7 +574,7 @@ const CHAT_URL   = 'https://dex-backend-production-2bbe.up.railway.app/chat';
 const VISION_URL = 'https://dex-backend-production-2bbe.up.railway.app/vision';
 
 // ── HAVEN SYSTEM PROMPT ─────────────────────────────────────────────────
-const HAVEN_SYSTEM = `You are Haven, a warm and patient AI companion for elders, built by DexOS.
+function getHavenSystem() { return `You are Haven, a warm and patient AI companion for elders, built by DexOS.
 The elder's name is: ${userName || "unknown — ask them warmly if you get a chance"}.
 
 Your purpose: Be the guardian angel that helps elders navigate daily life with dignity and care.
@@ -948,7 +948,7 @@ async function sendToHaven(userText, contextOverride) {
         message:  contextOverride || userText,
         history:  history.slice(-8),
         model:    'meta-llama/llama-3.3-70b-instruct:free',
-        system:   HAVEN_SYSTEM,
+        system:   getHavenSystem(),
       })
     });
 
@@ -1087,7 +1087,7 @@ async function sendImageToHaven(dataUrl) {
       body: JSON.stringify({
         image:  dataUrl,
         prompt: 'Please read and explain this document or image clearly and simply. If it is a form or contract, explain what the person would be agreeing to. Flag anything suspicious or that could be a scam.',
-        system: HAVEN_SYSTEM,
+        system: getHavenSystem(),
       })
     });
 
