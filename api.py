@@ -106,7 +106,7 @@ FALLBACK_MODELS = [
 ]
 
 
-async def call_llm(client, messages, max_tokens=120):
+async def call_llm(client, messages, max_tokens=250):
     if GROQ_KEY:
         try:
             res = await client.post(
