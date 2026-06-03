@@ -498,6 +498,13 @@
   <div id="wake-sigil">☧</div>
   <div id="wake-title">Haven</div>
   <div id="wake-sub">Your companion is here.<br>Ready to listen, help, and protect you.</div>
+  <div id="wake-examples" style="display:flex;flex-direction:column;gap:0.5rem;width:100%;max-width:320px;margin-top:0.5rem">
+    <div style="font-size:0.8rem;color:#AAA49A;text-align:center;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">You can ask things like</div>
+    <div style="background:#F5F2EA;border:1px solid #DDD8CC;border-radius:12px;padding:0.6rem 1rem;font-size:0.95rem;color:#2C2B28;text-align:center">"Help me call my daughter"</div>
+    <div style="background:#F5F2EA;border:1px solid #DDD8CC;border-radius:12px;padding:0.6rem 1rem;font-size:0.95rem;color:#2C2B28;text-align:center">"Read this letter to me"</div>
+    <div style="background:#F5F2EA;border:1px solid #DDD8CC;border-radius:12px;padding:0.6rem 1rem;font-size:0.95rem;color:#2C2B28;text-align:center">"Is this a scam?"</div>
+    <div style="background:#F5F2EA;border:1px solid #DDD8CC;border-radius:12px;padding:0.6rem 1rem;font-size:0.95rem;color:#2C2B28;text-align:center">"Remind me to take my pills"</div>
+  </div>
   <div id="wake-name-row" style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;width:100%;max-width:320px">
     <input id="wake-name-input" type="text" placeholder="What's your name?" style="width:100%;padding:0.8rem 1.2rem;border-radius:30px;border:1.5px solid #DDD8CC;font-family:Nunito,sans-serif;font-size:1.1rem;text-align:center;outline:none;background:#F5F2EA;color:#2C2B28;" />
   </div>
@@ -667,6 +674,13 @@ const elWake       = document.getElementById('wake-prompt');
 const elWakeBtn    = document.getElementById('wake-btn');
 
 // ── WAKE ─────────────────────────────────────────────────────────────────
+// Hide example prompts for returning users
+window.addEventListener('DOMContentLoaded', () => {
+  const visited = localStorage.getItem('haven_visited');
+  const examples = document.getElementById('wake-examples');
+  if (visited && examples) examples.style.display = 'none';
+});
+
 elWakeBtn.addEventListener('click', () => {
   const nameInput = document.getElementById('wake-name-input');
   if (nameInput && nameInput.value.trim()) {
@@ -694,11 +708,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function startSession() {
   setState(STATES.IDLE);
-  const greeting = userName
-    ? `Hello ${userName}! Wonderful to see you. What can I do for you today?`
-    : `Hello! I'm Haven. I'm here to help you. What can I do for you today?`;
-  addMsg('haven', greeting);
-  speak(greeting);
+  const isFirstVisit = !localStorage.getItem('haven_visited');
+  if (isFirstVisit) {
+    localStorage.setItem('haven_visited', 'true');
+    const intro = userName
+      ? `Hello ${userName}! I'm Haven, your personal companion. I'm here to help you anytime — just talk to me or type. You can ask me to help you call family, read letters, check if something is a scam, set reminders, or just have a conversation. Press the microphone button and say anything to get started.`
+      : `Hello! I'm Haven, your personal companion. I'm here to help you anytime — just talk to me or type. You can ask me to help you call family, read letters, check if something is a scam, set reminders, or just have a conversation. Press the microphone button and say anything to get started.`;
+    addMsg('haven', intro);
+    speak(intro);
+  } else {
+    const greeting = userName
+      ? `Welcome back ${userName}. Good to have you here. What can I do for you today?`
+      : `Welcome back. Good to have you here. What can I do for you today?`;
+    addMsg('haven', greeting);
+    speak(greeting);
+  }
 }
 
 // ── STATE MACHINE ─────────────────────────────────────────────────────────
