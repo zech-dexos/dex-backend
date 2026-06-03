@@ -850,6 +850,7 @@ function speak(text) {
     setState(STATES.IDLE);
   };
 
+
   currentUtter = utter;
   synthesis.speak(utter);
 }
@@ -915,13 +916,9 @@ function initRecognition() {
   };
 
   recognition.onend = () => {
-    // Only restart if actively listening — not during speak/think/idle
+    // Push to talk — don't auto restart
     if (state === STATES.LISTENING) {
-      setTimeout(() => {
-        if (state === STATES.LISTENING) {
-          try { recognition.start(); } catch(e) {}
-        }
-      }, 500);
+      setState(STATES.IDLE);
     }
   };
 }
