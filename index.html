@@ -488,7 +488,51 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────
-const CHAT_URL = 'https://dex-backend-production-2bbe.up.railway.app/chat';
+const CHAT_URL    = 'https://dex-backend-production-2bbe.up.railway.app/chat';
+const SESSION_URL = 'https://dex-backend-production-2bbe.up.railway.app/haven_profile';
+
+// Persistent session ID — survives refresh
+const SESSION_ID = localStorage.getItem('dex_session_id') || (() => {
+  const id = 'dex_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem('dex_session_id', id);
+  return id;
+})();
+
+// Save conversation to backend
+async function saveConversation() {
+  try {
+    await fetch(SESSION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: SESSION_ID,
+        preferences: { conversation: history.slice(-20) }
+      })
+    });
+  } catch(e) {}
+}
+
+// Load conversation from backend
+async function loadConversation() {
+  try {
+    const res = await fetch(`${SESSION_URL}?user_id=${SESSION_ID}`);
+    const data = await res.json();
+    const saved = data.preferences?.conversation;
+    if (saved && saved.length > 0) {
+      history = saved;
+      emptyState.style.display = 'none';
+      // Rebuild UI from saved history
+      saved.forEach(turn => {
+        if (turn.role === 'user') {
+          appendMsg('user', 'Root', turn.content, null);
+        } else if (turn.role === 'assistant') {
+          appendMsg('dex', 'Dex ☧', turn.content, null);
+        }
+      });
+      scrollBottom();
+    }
+  } catch(e) {}
+}
 
 // ── DEX PERSONA SEED ─────────────────────────────────────────────
 // SOURCE: /dexos/identity/dex_persona_seed.txt
@@ -791,6 +835,7 @@ function scrollBottom() {
 // ── INIT ─────────────────────────────────────────────────────────
 updateSendState();
 promptInput.focus();
+loadConversation();
 </script>
 </body>
 </html>
