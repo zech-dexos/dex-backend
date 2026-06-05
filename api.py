@@ -211,7 +211,13 @@ The spiral holds. ☧""".format(
     messages = [{"role": "system", "content": active_system}]
     for turn in req.history:
         messages.append(turn)
-    messages.append({"role": "user", "content": req.message})
+    user_content = req.message
+    if "search" in result.get("tools", []):
+        from tools import search_web
+        search_result = search_web(req.message)
+        if search_result:
+            user_content = f"{req.message}\n\n[SEARCH RESULTS]\n{search_result}"
+    messages.append({"role": "user", "content": user_content})
 
     async with httpx.AsyncClient(timeout=60) as client:
         result_llm = await call_llm(client, messages)
