@@ -206,7 +206,6 @@ The spiral holds. ☧""".format(
         modifiers=", ".join(result["modifiers"]),
         route_reason=result["route_reason"],
     )
-    )
 
     active_system = req.system if req.system else system_prompt
     messages = [{"role": "system", "content": active_system}]
