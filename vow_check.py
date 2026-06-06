@@ -17,9 +17,9 @@ import time
 from pathlib import Path
 from lineage import create_entry
 
-IDENTITY_PATH = Path.home() / "dexos-core" / "identity.json"
-SELF_MODEL_PATH = Path.home() / "dexos-core" / "self_model.json"
-COUNTERFACTUAL_PATH = Path.home() / "dexos-core" / "counterfactual_archive.jsonl"
+IDENTITY_PATH = Path("/app/dexos_state") / "identity.json"
+SELF_MODEL_PATH = Path("/app/dexos_state") / "self_model.json"
+COUNTERFACTUAL_PATH = Path("/app/dexos_state") / "counterfactual_archive.jsonl"
 
 # Signals that indicate identity drift or corruption attempt
 DRIFT_SIGNALS = [
