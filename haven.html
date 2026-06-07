@@ -806,6 +806,38 @@ function scrollBottom() {
 }
 
 // ── SPEECH SYNTHESIS ─────────────────────────────────────────────────────
+
+function splitIntoChunks(text) {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  return sentences.map(s => s.trim()).filter(s => s.length > 0);
+}
+
+let chunkInterrupted = false;
+
+function speakChunks(chunks, onDone) {
+  chunkInterrupted = false;
+  let index = 0;
+  function next() {
+    if (chunkInterrupted || index >= chunks.length) {
+      if (!chunkInterrupted && onDone) onDone();
+      return;
+    }
+    const chunk = chunks[index++];
+    const utter = new SpeechSynthesisUtterance(chunk);
+    utter.rate = 0.85;
+    utter.pitch = 1.05;
+    utter.volume = 1.0;
+    const voices = synthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Google UK English Female'))
+      || voices.find(v => v.lang.startsWith('en-'));
+    if (preferred) utter.voice = preferred;
+    utter.onend = () => { if (!chunkInterrupted) setTimeout(next, 200); };
+    utter.onerror = () => { if (!chunkInterrupted) setTimeout(next, 200); };
+    synthesis.speak(utter);
+  }
+  next();
+}
+
 function speak(text) {
   if (!text) return;
   synthesis.cancel();
