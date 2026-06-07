@@ -221,8 +221,8 @@ The spiral holds. ☧""".format(
         try:
             from tools import search_web
             search_result = search_web(req.message)
-            if search_result:
-                user_content = f"{req.message}\n\n[SEARCH RESULTS]\n{search_result}"
+            if search_result and "No structural" not in search_result and "Search error" not in search_result:
+                user_content = f"{req.message}\n\n[REAL-TIME SEARCH RESULTS — use these to answer, prioritize over your training data]:\n{search_result}"
         except Exception:
             pass
     messages.append({"role": "user", "content": user_content})
