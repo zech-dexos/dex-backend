@@ -845,7 +845,13 @@ function speak(text) {
   if (recognition) try { recognition.stop(); } catch(e) {}
   setState(STATES.SPEAKING);
   const chunks = splitIntoChunks(text);
-  speakChunks(chunks, () => { setState(STATES.IDLE); });
+  speakChunks(chunks, () => {
+    setState(STATES.IDLE);
+    // Block echo for 2 seconds after Haven finishes speaking
+    if (typeof setEchoGate === 'function') setEchoGate(2000);
+    elMicBtn.text = "Speak to Haven";
+    elMicBtn.disabled = false;
+  });
 }
 
 function stopSpeaking() {
