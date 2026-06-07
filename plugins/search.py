@@ -1,26 +1,29 @@
 import requests
+from urllib.parse import quote
 
 TOOL_NAME = "search"
-TRIGGERS = ["search", "look up", "find", "what is", "who is", "where is", "when is", "how do", "what are", "weather", "news"]
+TRIGGERS = ["who is", "what is", "where is", "when is", "how do", "find", "look up", "search", "weather", "news", "current", "latest", "today", "what are", "tell me about"]
 
 def run(query: str) -> str:
     try:
-        clean = query.lower()
-        for t in TRIGGERS:
-            clean = clean.replace(t, "").strip()
-        
-        url = f"https://api.duckduckgo.com/?q={requests.utils.quote(clean)}&format=json&no_redirect=1&no_html=1"
+        url = f"https://api.duckduckgo.com/?q={quote(query)}&format=json&no_redirect=1&no_html=1"
         r = requests.get(url, timeout=8)
         data = r.json()
         
         abstract = data.get("AbstractText", "")
-        if abstract:
-            return abstract[:300]
+        if abstract and len(abstract) > 50:
+            return abstract[:400]
         
         related = data.get("RelatedTopics", [])
-        if related and isinstance(related[0], dict):
-            return related[0].get("Text", "")[:300]
+        results = []
+        for item in related[:3]:
+            if isinstance(item, dict) and item.get("Text"):
+                results.append(item["Text"][:150])
         
+        if results:
+            return " | ".join(results)
+            
         return ""
-    except Exception as e:
+        
+    except Exception:
         return ""
