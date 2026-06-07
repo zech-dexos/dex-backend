@@ -841,50 +841,11 @@ function speakChunks(chunks, onDone) {
 function speak(text) {
   if (!text) return;
   synthesis.cancel();
+  chunkInterrupted = false;
+  if (recognition) try { recognition.stop(); } catch(e) {}
   setState(STATES.SPEAKING);
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate  = 0.88;   // slightly slower for elders
-  utter.pitch = 1.0;
-  utter.volume = 1.0;
-
-  // Pick the warmest available voice — prioritize by quality
-  const voices = synthesis.getVoices();
-  const voicePriority = [
-    'Google UK English Female',
-    'Google US English',
-    'Microsoft Zira',
-    'Microsoft Jenny',
-    'Samantha',
-    'Karen',
-    'Moira',
-    'Tessa',
-    'Fiona',
-  ];
-  let preferred = null;
-  for (const name of voicePriority) {
-    preferred = voices.find(v => v.name.includes(name));
-    if (preferred) break;
-  }
-  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en-') && !v.name.includes('Male'));
-  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en'));
-  if (preferred) utter.voice = preferred;
-  utter.rate  = 0.85;
-  utter.pitch = 1.05;
-
-  utter.onend = () => {
-    currentUtter = null;
-    setState(STATES.IDLE);
-    setTimeout(() => startListening(), 600);
-  };
-
-  utter.onerror = () => {
-    setState(STATES.IDLE);
-  };
-
-
-  currentUtter = utter;
-  synthesis.speak(utter);
+  const chunks = splitIntoChunks(text);
+  speakChunks(chunks, () => { setState(STATES.IDLE); });
 }
 
 function stopSpeaking() {
