@@ -634,7 +634,7 @@ CRITICAL VOICE RULES — never break these:
 ☧🦅🜇`; }
 
 // ── STATE ────────────────────────────────────────────────────────────────
-const STATES = { IDLE: 'idle', LISTENING: 'listening', THINKING: 'thinking', SPEAKING: 'speaking' };
+const STATES = { IDLE: 'idle', LISTENING: 'listening', THINKING: 'thinking', SPEAKING: 'speaking', INTERRUPTED: 'interrupted', REBUILDING: 'rebuilding' };
 let state        = STATES.IDLE;
 let history      = [];
 let recognition  = null;
@@ -856,6 +856,7 @@ function speak(text) {
 }
 
 function stopSpeaking() {
+  chunkInterrupted = true;
   synthesis.cancel();
   currentUtter = null;
   setState(STATES.IDLE);
@@ -895,6 +896,7 @@ function initRecognition() {
         const spoken = final.trim();
         const wordCount = spoken.split(' ').filter(w => w.length > 0).length;
         if (spoken.length > 8 && wordCount >= 2) {
+          chunkInterrupted = true;
           stopSpeaking();
           handleInterruption(spoken);
           return;
