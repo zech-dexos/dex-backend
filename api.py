@@ -215,11 +215,16 @@ The spiral holds. ☧""".format(
     for turn in req.history:
         messages.append(turn)
     user_content = req.message
-    if "search" in result.get("tools", []):
-        from tools import search_web
-        search_result = search_web(req.message)
-        if search_result:
-            user_content = f"{req.message}\n\n[SEARCH RESULTS]\n{search_result}"
+    search_keywords = ["who is", "what is", "where is", "when is", "how do", "find", "look up", "search", "weather", "news", "current", "latest", "today"]
+    needs_search = "search" in result.get("tools", []) or any(kw in req.message.lower() for kw in search_keywords)
+    if needs_search:
+        try:
+            from tools import search_web
+            search_result = search_web(req.message)
+            if search_result:
+                user_content = f"{req.message}\n\n[SEARCH RESULTS]\n{search_result}"
+        except Exception:
+            pass
     messages.append({"role": "user", "content": user_content})
 
     async with httpx.AsyncClient(timeout=60) as client:
