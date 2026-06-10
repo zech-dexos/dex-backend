@@ -16,6 +16,8 @@ except ImportError:
 try:
     from pathlib import Path
     Path("/app/dexos_state").mkdir(exist_ok=True)
+    from github_persistence import pull_from_github, push_to_github
+    pull_from_github()
     from dexos import DexOS
     _dexos = DexOS()
     _dexos.initialize()
