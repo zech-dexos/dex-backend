@@ -24,6 +24,9 @@ async def on_message(message):
     if client.user not in message.mentions:
         return
 
+    if message.channel.id != 1512392303912943742:
+        return
+
     channel_id = str(message.channel.id)
     if channel_id not in conversation_history:
         conversation_history[channel_id] = []
