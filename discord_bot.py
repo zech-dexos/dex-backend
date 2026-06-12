@@ -21,6 +21,9 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    if client.user not in message.mentions:
+        return
+
     channel_id = str(message.channel.id)
     if channel_id not in conversation_history:
         conversation_history[channel_id] = []
