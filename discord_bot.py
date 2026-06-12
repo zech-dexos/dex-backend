@@ -49,7 +49,13 @@ async def on_message(message):
             if len(history) > 20:
                 conversation_history[channel_id] = history[-20:]
 
-            await message.channel.send(reply)
+            # Split long replies into chunks
+            if len(reply) <= 2000:
+                await message.channel.send(reply)
+            else:
+                chunks = [reply[i:i+1900] for i in range(0, len(reply), 1900)]
+                for chunk in chunks:
+                    await message.channel.send(chunk)
 
         except Exception as e:
             await message.channel.send(f"something broke: {e}")
