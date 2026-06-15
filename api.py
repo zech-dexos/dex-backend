@@ -423,7 +423,7 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
     else:
         clean_reply = full_reply
     
-    return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply}
+    return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply, "model": result["model"]}
 
 ELEVENLABS_KEY = os.environ.get("ELEVENLABS_KEY", "")
 ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"  # Rachel — warm, clear
