@@ -96,6 +96,9 @@ DEFAULT_MODEL   = "google/gemma-4-31b-it:free"
 GROQ_KEY = os.environ.get("GROQ_KEY", "")
 GROQ_URL  = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
+
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 FALLBACK_MODELS = [
     "google/gemma-4-31b-it:free",
     "google/gemma-4-26b-a4b-it:free",
@@ -106,7 +109,46 @@ FALLBACK_MODELS = [
 ]
 
 
+async def call_gemini(client, messages, max_tokens=250):
+    if not GEMINI_KEY:
+        return None
+    contents = []
+    system_text = ""
+    for m in messages:
+        if m["role"] == "system":
+            system_text += m["content"] + "\n"
+        elif m["role"] == "user":
+            contents.append({"role": "user", "parts": [{"text": m["content"]}]})
+        elif m["role"] == "assistant":
+            contents.append({"role": "model", "parts": [{"text": m["content"]}]})
+    if not contents:
+        return None
+    payload = {"contents": contents, "generationConfig": {"maxOutputTokens": max_tokens}}
+    if system_text:
+        payload["systemInstruction"] = {"parts": [{"text": system_text.strip()}]}
+    try:
+        res = await client.post(
+            f"{GEMINI_URL}?key={GEMINI_KEY}",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+        )
+        data = res.json()
+        candidates = data.get("candidates", [])
+        if candidates:
+            parts = candidates[0].get("content", {}).get("parts", [])
+            text = "".join(p.get("text", "") for p in parts)
+            if text:
+                return {"reply": text, "model": "gemini-2.5-flash"}
+    except Exception:
+        pass
+    return None
+
+
 async def call_llm(client, messages, max_tokens=250):
+    gemini_result = await call_gemini(client, messages, max_tokens)
+    if gemini_result:
+        return gemini_result
+
     if GROQ_KEY:
         try:
             res = await client.post(
