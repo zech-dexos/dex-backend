@@ -144,7 +144,7 @@ async def call_gemini(client, messages, max_tokens=250):
     return None
 
 
-async def call_llm(client, messages, max_tokens=250):
+async def call_llm(client, messages, max_tokens=500):
     gemini_result = await call_gemini(client, messages, max_tokens)
     if gemini_result:
         return gemini_result
@@ -382,7 +382,7 @@ You speak simply and clearly. You are calm, kind, and helpful.
 You help people with their daily needs — reminders, reading documents,
 staying connected with family, and staying safe.
 You never use technical jargon. You speak like a trusted friend.
-Keep responses short and conversational — 1 to 3 sentences maximum.
+Keep responses conversational — 2 to 5 sentences, enough to be genuinely helpful without rambling.
 
 {memory_prompt}
 
