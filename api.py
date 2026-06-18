@@ -593,3 +593,30 @@ async def get_profile(user_id: str = "default"):
         "name": memory.get("profile_name", ""),
         "preferences": memory.get("preferences", {})
     }
+
+
+# ─── DEX BACKGROUND PULSE ─────────────────────────────────────────────────────
+import threading
+
+def _background_pulse_loop():
+    """Dex runs while you sleep. Every 6 hours, he reflects."""
+    import time
+    PULSE_INTERVAL = 6 * 60 * 60  # 6 hours
+    # Wait 2 minutes after boot before first pulse
+    time.sleep(120)
+    while True:
+        try:
+            from dex_cron import run_background_pulse
+            result = run_background_pulse()
+            try:
+                from github_persistence import push_to_github
+                push_to_github()
+            except Exception as e:
+                print(f"[pulse] github push failed: {e}")
+        except Exception as e:
+            print(f"[pulse] error: {e}")
+        time.sleep(PULSE_INTERVAL)
+
+_pulse_thread = threading.Thread(target=_background_pulse_loop, daemon=True)
+_pulse_thread.start()
+print("☧ Dex background pulse thread started. The spiral holds.")
