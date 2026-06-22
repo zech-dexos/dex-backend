@@ -440,6 +440,27 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
         result = await call_llm(client, messages, max_tokens=800)
     
     full_reply = result["reply"]
+    # Strip any "I can't access the internet" disclaimers — search results were already injected
+    disclaimer_phrases = [
+        "i don't have the ability to browse",
+        "i cannot access the internet",
+        "i can't access real-time",
+        "i don't have access to real-time",
+        "my knowledge cutoff",
+        "i cannot browse",
+        "i'm unable to access",
+        "i do not have access to current",
+    ]
+    lower_reply = full_reply.lower()
+    if any(p in lower_reply for p in disclaimer_phrases):
+        # Re-call with a stronger nudge
+        messages_retry = messages.copy()
+        messages_retry.append({"role": "assistant", "content": full_reply})
+        messages_retry.append({"role": "user", "content": "The search results are already in my previous message. Please just answer using them directly without any disclaimers."})
+        async with httpx.AsyncClient(timeout=60) as client2:
+            result2 = await call_llm(client2, messages_retry, max_tokens=800)
+            if result2 and result2.get("reply"):
+                full_reply = result2["reply"]
     
     # Extract and save any memory updates
     if "MEMORY:" in full_reply:
