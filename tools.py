@@ -1,29 +1,29 @@
+import os
 import requests
-from urllib.parse import quote
-import re
+
+TAVILY_KEY = os.environ.get("TAVILY_API_KEY", "")
 
 def search_web(query: str, max_results: int = 3) -> str:
+    if not TAVILY_KEY:
+        return "Search is not configured."
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        # Hit the static HTML endpoint
-        url = f"https://duckduckgo.com/html/?q={quote(query)}"
-        r = requests.get(url, headers=headers, timeout=8)
-        
-        # FIX: Catch everything inside the result__snippet container dynamically
-        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</div>', r.text, re.DOTALL)
-        
-        # If DuckDuckGo uses table cells instead of divs in your region, this fallback catches it:
-        if not snippets:
-            snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</td|div|a>', r.text, re.DOTALL)
-
-        # Clean HTML tags out of the extracted snippets
-        clean = [re.sub(r'<.*?>', '', s).strip() for s in snippets[:max_results]]
-        
-        # Reformat whitespace and breaks
-        clean = [re.sub(r'\s+', ' ', s) for s in clean if s]
-        
-        return "\n\n".join(clean) if clean else "No structural snippets found in page parsing."
+        r = requests.post(
+            "https://api.tavily.com/search",
+            json={
+                "api_key": TAVILY_KEY,
+                "query": query,
+                "max_results": max_results,
+                "search_depth": "basic",
+                "include_answer": True,
+            },
+            timeout=10,
+        )
+        data = r.json()
+        # Prefer the pre-summarized answer if Tavily returned one
+        if data.get("answer"):
+            return data["answer"]
+        results = data.get("results", [])
+        snippets = [res.get("content", "") for res in results if res.get("content")]
+        return "\n\n".join(snippets[:max_results]) if snippets else "No results found."
     except Exception as e:
         return f"Search error: {e}"

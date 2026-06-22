@@ -408,7 +408,29 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
     messages = [{"role": "system", "content": system_prompt}]
     for msg in req.messages:
         messages.append(msg)
-    
+
+    # Live search injection — same pattern as /chat route
+    last_user = next(
+        (m["content"] for m in reversed(req.messages) if m.get("role") == "user"), ""
+    )
+    search_keywords = [
+        "who is", "what is", "where is", "when is", "how do",
+        "find", "look up", "search", "weather", "news",
+        "current", "latest", "today", "score", "price"
+    ]
+    if any(kw in last_user.lower() for kw in search_keywords):
+        try:
+            from tools import search_web
+            search_result = search_web(last_user)
+            if search_result and "Search error" not in search_result and "not configured" not in search_result:
+                # Inject search results into the last user message
+                messages[-1]["content"] = (
+                    f"{last_user}\n\n[REAL-TIME SEARCH RESULTS — use these to answer, "
+                    f"prioritize over your training data]:\n{search_result}"
+                )
+        except Exception:
+            pass
+
     async with httpx.AsyncClient(timeout=60) as client:
         result = await call_llm(client, messages)
     
