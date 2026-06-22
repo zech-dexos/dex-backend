@@ -415,18 +415,21 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
     )
     search_keywords = [
         "who is", "what is", "where is", "when is", "how do",
+        "who are", "who was", "who's", "whos",
+        "president", "prime minister", "ceo", "mayor", "governor",
         "find", "look up", "search", "weather", "news",
-        "current", "latest", "today", "score", "price"
+        "current", "latest", "today", "score", "price",
+        "right now", "this year", "2025", "2026",
+        "happened", "update", "recently"
     ]
     if any(kw in last_user.lower() for kw in search_keywords):
         try:
             from tools import search_web
             search_result = search_web(last_user)
             if search_result and "Search error" not in search_result and "not configured" not in search_result:
-                # Inject search results into the last user message
                 messages[-1]["content"] = (
-                    f"{last_user}\n\n[REAL-TIME SEARCH RESULTS — use these to answer, "
-                    f"prioritize over your training data]:\n{search_result}"
+                    f"{last_user}\n\n[CRITICAL: USE ONLY THESE REAL-TIME SEARCH RESULTS TO ANSWER. "
+                    f"IGNORE YOUR TRAINING DATA — it is outdated. Today is {__import__('datetime').date.today()}.]:\n{search_result}"
                 )
         except Exception:
             pass
