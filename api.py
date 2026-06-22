@@ -432,7 +432,7 @@ Example: MEMORY: name=Margaret, daughter=Lisa"""
             pass
 
     async with httpx.AsyncClient(timeout=60) as client:
-        result = await call_llm(client, messages)
+        result = await call_llm(client, messages, max_tokens=800)
     
     full_reply = result["reply"]
     
