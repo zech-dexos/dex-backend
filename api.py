@@ -61,6 +61,16 @@ def feedback(req: FeedbackRequest):
     _memory.save()
     return {"status": "ok", "results": results}
 
+@app.get("/search_debug")
+async def search_debug():
+    import os
+    key = os.environ.get("TAVILY_API_KEY", "")
+    if not key:
+        return {"status": "NO KEY", "detail": "TAVILY_API_KEY not found in environment"}
+    from tools import search_web
+    result = search_web("who is the president of the united states 2026")
+    return {"status": "OK", "key_prefix": key[:8] + "...", "result": result}
+
 @app.get("/health")
 def health():
     return {"status": "live", "sigils": _memory.summary() if SIGIL_ACTIVE and _memory else None, "key_loaded": bool(OPENROUTER_KEY)}
