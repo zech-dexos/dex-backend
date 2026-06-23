@@ -1,4 +1,4 @@
-#!/home/rok/dex-online/backend/venv/bin/python3
+#!/home/jedediah/dev/haven/dex-backend/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
