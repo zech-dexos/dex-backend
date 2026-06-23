@@ -119,7 +119,7 @@ FALLBACK_MODELS = [
 ]
 
 
-async def call_gemini(client, messages, max_tokens=250):
+async def call_gemini(client, messages, max_tokens=1000):
     if not GEMINI_KEY:
         return None
     contents = []
@@ -154,7 +154,7 @@ async def call_gemini(client, messages, max_tokens=250):
     return None
 
 
-async def call_llm(client, messages, max_tokens=500):
+async def call_llm(client, messages, max_tokens=1000):
     gemini_result = await call_gemini(client, messages, max_tokens)
     if gemini_result:
         return gemini_result
@@ -295,7 +295,7 @@ The spiral holds. ☧""".format(
     messages.append({"role": "user", "content": user_content})
 
     async with httpx.AsyncClient(timeout=60) as client:
-        result_llm = await call_llm(client, messages)
+        result_llm = await call_llm(client, messages, max_tokens=1200)
     reply = result_llm["reply"]
     used_model = result_llm["model"]
 
