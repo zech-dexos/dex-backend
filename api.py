@@ -362,7 +362,25 @@ from pathlib import Path
 MEMORY_DIR = Path("/app/haven_memory")
 MEMORY_DIR.mkdir(exist_ok=True)
 
+def _gh_headers():
+    token = os.environ.get("GITHUB_TOKEN", "")
+    return {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+
 def load_memory(user_id: str) -> dict:
+    # Try GitHub first (survives Railway restarts)
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if token:
+        try:
+            url = f"https://api.github.com/repos/zech-dexos/dex-backend/contents/haven_memory/{user_id}.json"
+            r = requests.get(url, headers=_gh_headers(), timeout=8)
+            if r.status_code == 200:
+                import base64
+                content_b64 = r.json().get("content", "")
+                decoded = base64.b64decode(content_b64).decode("utf-8")
+                return json.loads(decoded)
+        except Exception as e:
+            print(f"GitHub memory load error: {e}")
+    # Fallback to local file
     memory_file = MEMORY_DIR / f"{user_id}.json"
     if memory_file.exists():
         try:
@@ -372,8 +390,25 @@ def load_memory(user_id: str) -> dict:
     return {}
 
 def save_memory(user_id: str, memory: dict):
+    # Save locally
     memory_file = MEMORY_DIR / f"{user_id}.json"
     memory_file.write_text(json.dumps(memory, indent=2))
+    # Push to GitHub so it survives Railway restarts
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if token:
+        try:
+            import base64, requests as req
+            url = f"https://api.github.com/repos/zech-dexos/dex-backend/contents/haven_memory/{user_id}.json"
+            encoded = base64.b64encode(json.dumps(memory, indent=2).encode()).decode()
+            # Get current SHA if exists
+            r = req.get(url, headers=_gh_headers(), timeout=8)
+            sha = r.json().get("sha") if r.status_code == 200 else None
+            payload = {"message": f"Haven memory update — {user_id}", "content": encoded}
+            if sha:
+                payload["sha"] = sha
+            req.put(url, headers=_gh_headers(), json=payload, timeout=10)
+        except Exception as e:
+            print(f"GitHub memory save error: {e}")
 
 def memory_to_prompt(memory: dict) -> str:
     if not memory:
