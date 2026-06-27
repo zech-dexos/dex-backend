@@ -428,6 +428,7 @@ def memory_to_prompt(memory: dict) -> str:
 class HavenRequest(BaseModel):
     messages: list
     user_id: str = "default"
+    voice_context: dict = {}
 
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
@@ -491,6 +492,20 @@ Example: MEMORY: name=Margaret, daughter=Lisa, takes blood pressure medication""
                 )
         except Exception:
             pass
+
+    # Voice context injection
+    vc = req.voice_context
+    if vc:
+        emotion  = vc.get("emotion", "")
+        stress   = vc.get("stress", 0)
+        fatigue  = vc.get("fatigue", 0)
+        voice_note = f"""
+Voice observations (from audio analysis — do not mention unless relevant):
+- Emotion: {emotion}
+- Stress level: {stress:.0%}
+- Fatigue level: {fatigue:.0%}
+Respond naturally. Let this inform your tone, not your words."""
+        messages[0]["content"] += voice_note
 
     async with httpx.AsyncClient(timeout=60) as client:
         result = await call_llm(client, messages, max_tokens=800)
