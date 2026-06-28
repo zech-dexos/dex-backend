@@ -31,8 +31,16 @@ def _get_firestore():
     global _fb_app, _firestore
     if _firestore is None:
         try:
+            key_b64 = os.environ.get("FIREBASE_KEY_B64", "")
             key_path = os.path.join(os.path.dirname(__file__), "firebase-key.json")
-            if os.path.exists(key_path):
+            if key_b64:
+                import base64, tempfile
+                key_json = base64.b64decode(key_b64).decode("utf-8")
+                tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+                tmp.write(key_json)
+                tmp.flush()
+                cred = credentials.Certificate(tmp.name)
+            elif os.path.exists(key_path):
                 cred = credentials.Certificate(key_path)
             else:
                 cred = credentials.ApplicationDefault()
