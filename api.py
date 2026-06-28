@@ -19,6 +19,41 @@ except ImportError:
     SIGIL_ACTIVE = False
     _memory = None
 
+# Firestore telemetry — XPRIZE requirement C
+import firebase_admin
+from firebase_admin import credentials, firestore as fs
+import datetime
+
+_fb_app = None
+_firestore = None
+
+def _get_firestore():
+    global _fb_app, _firestore
+    if _firestore is None:
+        try:
+            key_path = os.path.join(os.path.dirname(__file__), "firebase-key.json")
+            if os.path.exists(key_path):
+                cred = credentials.Certificate(key_path)
+            else:
+                cred = credentials.ApplicationDefault()
+            _fb_app = firebase_admin.initialize_app(cred)
+            _firestore = fs.client()
+        except Exception as e:
+            print(f"[firestore] init failed: {e}")
+    return _firestore
+
+def log_telemetry(event: str, data: dict):
+    try:
+        db = _get_firestore()
+        if db:
+            db.collection("haven_telemetry").add({
+                "event":     event,
+                "timestamp": datetime.datetime.utcnow().isoformat(),
+                **data
+            })
+    except Exception as e:
+        print(f"[firestore] log failed: {e}")
+
 app = FastAPI(title="ReasonFlow API", version="1.0.0")
 
 app.add_middleware(
@@ -557,6 +592,14 @@ Respond naturally. Let this inform your tone, not your words."""
     else:
         clean_reply = full_reply
     
+    log_telemetry("haven_request", {
+        "user_id":        req.user_id,
+        "model":          result["model"],
+        "memory_updated": "MEMORY:" in full_reply,
+        "has_voice":      bool(req.voice_context),
+        "emotion":        req.voice_context.get("emotion", "") if req.voice_context else "",
+        "stress":         req.voice_context.get("stress", 0) if req.voice_context else 0,
+    })
     return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply, "model": result["model"]}
 
 ELEVENLABS_KEY = os.environ.get("ELEVENLABS_KEY", "")
