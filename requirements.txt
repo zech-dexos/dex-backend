@@ -4,3 +4,4 @@ pydantic
 httpx
 gtts
 discord.py
+firebase-admin
