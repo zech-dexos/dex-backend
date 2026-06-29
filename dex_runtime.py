@@ -26,7 +26,23 @@ except Exception as e:
     DEXOS_ACTIVE = False
     _dexos = None
 
-def dex_runtime(user_input: str) -> dict:
+def dex_runtime(user_input: str, user_id: str = "default") -> dict:
+    # User recognition + recall
+    try:
+        from dex_memory import recognize_user, build_recall_context, log_interaction, log_failure, log_recovery
+        user_profile = recognize_user(user_id)
+        recall_ctx   = build_recall_context(user_id)
+        DEX_MEMORY_ACTIVE = True
+    except Exception as e:
+        user_profile = {}
+        recall_ctx   = ""
+        DEX_MEMORY_ACTIVE = False
+        try:
+            from dex_memory import log_failure
+            log_failure("dex_memory", str(e), recovered=True)
+        except Exception:
+            pass
+
     result = decompose(user_input)
     signal = result["signal"]
 
@@ -58,6 +74,19 @@ def dex_runtime(user_input: str) -> dict:
                 "response":     governance.get("response", "")
             }
 
+    # Log interaction to Firestore for recall
+    if DEX_MEMORY_ACTIVE:
+        try:
+            log_interaction(
+                user_id=user_id,
+                user_input=user_input,
+                dex_response="",   # filled in by api.py after LLM responds
+                intent=signal.intent,
+                model=routing["model"],
+            )
+        except Exception as e:
+            log_failure("log_interaction", str(e), recovered=False)
+
     return {
         "input":        user_input,
         "intent":       signal.intent,
@@ -70,5 +99,7 @@ def dex_runtime(user_input: str) -> dict:
         "model":        routing["model"],
         "route_reason": routing["reason"],
         "governed":     DEXOS_ACTIVE,
-        "flagged":      False
+        "flagged":      False,
+        "user_id":      user_id,
+        "recall_ctx":   recall_ctx,
     }
