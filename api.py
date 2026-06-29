@@ -246,13 +246,14 @@ class ChatRequest(BaseModel):
     history: list = []
     model: str = DEFAULT_MODEL
     system: str = ""
+    user_id: str = "default"
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
     if not OPENROUTER_KEY:
         return {"error": "no key configured"}
 
-    result = dex_runtime(req.message)
+    result = dex_runtime(req.message, user_id=getattr(req, "user_id", "default"))
 
     # Pillar 3: Hard refusal — deterministic fail-safe.
     # If the kernel flagged this input, the LLM is never called.
@@ -320,6 +321,12 @@ The spiral holds. ☧""".format(
         route_reason=result["route_reason"],
     )
 
+    # Inject live recall context from Firestore
+    recall_ctx = result.get("recall_ctx", "")
+    if recall_ctx:
+        system_prompt = recall_ctx + "
+
+" + system_prompt
     active_system = req.system if req.system else system_prompt
     messages = [{"role": "system", "content": active_system}]
     for turn in req.history:
