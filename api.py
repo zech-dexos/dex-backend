@@ -461,16 +461,77 @@ def save_memory(user_id: str, memory: dict):
 def memory_to_prompt(memory: dict) -> str:
     if not memory:
         return ""
-    lines = ["What you know about this person:"]
+    lines = ["What you know and remember about this person — use this naturally in conversation, like a real friend would:"]
+
     if memory.get("name"):
-        lines.append(f"- Their name is {memory['name']}")
-    if memory.get("family"):
-        lines.append(f"- Family: {memory['family']}")
+        lines.append(f"- Name: {memory['name']}")
+    if memory.get("birthday"):
+        lines.append(f"- Birthday: {memory['birthday']}")
+    if memory.get("age"):
+        lines.append(f"- Age: {memory['age']}")
+
+    # Family — stored as dict of relationship->details
+    family = memory.get("family", {})
+    if isinstance(family, dict):
+        for rel, details in family.items():
+            if isinstance(details, dict):
+                name = details.get("name", "")
+                note = details.get("note", "")
+                lines.append(f"- {rel.capitalize()}: {name}" + (f" ({note})" if note else ""))
+            else:
+                lines.append(f"- {rel.capitalize()}: {details}")
+    elif isinstance(family, str) and family:
+        lines.append(f"- Family: {family}")
+
+    if memory.get("hobbies"):
+        hobbies = memory["hobbies"]
+        if isinstance(hobbies, list):
+            lines.append(f"- Hobbies/interests: {', '.join(hobbies)}")
+        else:
+            lines.append(f"- Hobbies/interests: {hobbies}")
+
     if memory.get("medications"):
-        lines.append(f"- Medications: {memory['medications']}")
+        meds = memory["medications"]
+        if isinstance(meds, list):
+            lines.append(f"- Medications: {', '.join(meds)}")
+        else:
+            lines.append(f"- Medications: {meds}")
+
+    if memory.get("fears"):
+        fears = memory["fears"]
+        if isinstance(fears, list):
+            lines.append(f"- Sensitive topics (handle gently): {', '.join(fears)}")
+        else:
+            lines.append(f"- Sensitive topics: {fears}")
+
+    if memory.get("favorites"):
+        favs = memory["favorites"]
+        if isinstance(favs, dict):
+            for k, v in favs.items():
+                lines.append(f"- Favorite {k}: {v}")
+        else:
+            lines.append(f"- Favorites: {favs}")
+
+    if memory.get("important_dates"):
+        dates = memory["important_dates"]
+        if isinstance(dates, list):
+            for d in dates[-3:]:
+                lines.append(f"- Important date: {d}")
+        else:
+            lines.append(f"- Important date: {dates}")
+
+    if memory.get("emotional_history"):
+        eh = memory["emotional_history"]
+        if isinstance(eh, list) and eh:
+            lines.append(f"- Recently felt: {eh[-1]}")
+
     if memory.get("notes"):
-        for note in memory["notes"][-5:]:
+        for note in memory["notes"][-3:]:
             lines.append(f"- {note}")
+
+    lines.append("")
+    lines.append("Use this naturally — ask follow-up questions, remember details, bring them up warmly when relevant.")
+    lines.append("Example: if her daughter Lisa calls every Sunday, ask 'Did you get to talk to Lisa this week?'")
     return "\n".join(lines)
 
 class HavenRequest(BaseModel):
@@ -510,7 +571,7 @@ Keep responses warm and conversational — 2 to 5 sentences unless more is genui
 
 After responding, if you learned something important about this person worth remembering for next time,
 add a line at the very end starting with MEMORY: and note it concisely.
-Example: MEMORY: name=Margaret, daughter=Lisa, takes blood pressure medication"""
+Example: MEMORY: name=Margaret, birthday=March 14, daughter_name=Lisa, daughter_note=calls every Sunday, hobby=gardening, medication=blood pressure pill morning, fear=falling, favorite_food=apple pie, emotion=feeling lonely today"""
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in req.messages:
