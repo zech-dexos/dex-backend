@@ -324,9 +324,7 @@ The spiral holds. ☧""".format(
     # Inject live recall context from Firestore
     recall_ctx = result.get("recall_ctx", "")
     if recall_ctx:
-        system_prompt = recall_ctx + "
-
-" + system_prompt
+        system_prompt = recall_ctx + "\n\n" + system_prompt
     active_system = req.system if req.system else system_prompt
     messages = [{"role": "system", "content": active_system}]
     for turn in req.history:
