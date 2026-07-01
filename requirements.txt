@@ -5,3 +5,4 @@ httpx
 gtts
 discord.py
 firebase-admin
+google-generativeai
