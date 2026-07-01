@@ -561,7 +561,9 @@ async def haven_api(req: HavenRequest):
         return {"voice_response": "I'm having trouble connecting right now.", "device_action": None}
     
     import google.generativeai as genai
-    genai.configure(api_key=gemini_key)
+    # Force-map whatever active token you have on Railway into the Gemini Engine
+    active_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENROUTER_KEY")
+    genai.configure(api_key=active_key)
 
     # Build the combined high-context prompt mirroring your core identity guidelines
     system_prompt = """You are Haven — a warm, patient, and emotionally aware AI companion built for elderly users and people who need a little extra support.
