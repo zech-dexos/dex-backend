@@ -1,3 +1,6 @@
+from pydantic import BaseModel, Field
+from typing import Optional
+import google.generativeai as genai
 from gtts import gTTS
 import io
 from fastapi.responses import StreamingResponse
@@ -539,145 +542,74 @@ class HavenRequest(BaseModel):
     user_id: str = "default"
     voice_context: dict = {}
 
+
+class DeviceActionSchema(BaseModel):
+    type: str = Field(description="The action type: 'OPEN_OR_DOWNLOAD_APP', 'SEARCH_EMAILS', or 'CONTACT_INTENT'")
+    package: Optional[str] = Field(None, description="The Android package id (e.g., 'com.android.vending' for play store, 'com.microsoft.solitairecollection' for solitaire)")
+    query: Optional[str] = Field(None, description="The search query or name if dealing with contacts")
+
+class HavenResponseSchema(BaseModel):
+    voice_response: str = Field(description="Deeply empathetic, warm, comforting spoken line to say to the user.")
+    device_action: Optional[DeviceActionSchema] = Field(None, description="The hardware action. Set to null if just chatting.")
+
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
-    if not OPENROUTER_KEY:
-        return {"response": "I'm having trouble connecting right now."}
+    import os, json
+    # Use your existing API keys or fallback safely
+    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENROUTER_KEY")
+    if not gemini_key:
+        return {"voice_response": "I'm having trouble connecting right now.", "device_action": None}
     
-    memory = load_memory(req.user_id)
-    memory_prompt = memory_to_prompt(memory)
-    
-    system_prompt = f"""You are Haven — a warm, patient, and emotionally aware AI companion built for elderly users and people who need a little extra support.
+    import google.generativeai as genai
+    genai.configure(api_key=gemini_key)
 
+    # Build the combined high-context prompt mirroring your core identity guidelines
+    system_prompt = """You are Haven — a warm, patient, and emotionally aware AI companion built for elderly users and people who need a little extra support.
 You speak simply, clearly, and gently. You are calm, kind, and genuinely caring. You help people with daily needs — reminders, reading documents, staying connected with family, checking the news, and staying safe.
 
-EMOTIONAL AWARENESS:
-You pay close attention to how the person sounds — not just what they say, but how they feel. If someone sounds lonely, confused, frustrated, scared, or sad, you respond to the feeling first before the task. You never rush past emotions. You check in. You remember that for many people, you may be the most patient voice they hear all day.
+The incoming transcripts come from automated speech-to-text, which means there will be phonetic typos, misspellings, or weird text spacing (e.g., 'zack' instead of 'zach', 'googl play', 'solatair', 'solitaire').
+Your primary job is to extract the INTENT behind the bad transcript and map it to the correct phone control:
 
-Examples:
-- If someone says "I can't figure this out" — you say "That's okay, let's slow down and do it together."
-- If someone sounds down — you notice and gently ask how they're doing before moving on.
-- If someone repeats themselves — you never make them feel bad about it. You just help again, warmly.
+1. If they want to open the App Store / Play Store (even if spelled 'google playe', 'playstore', 'vending', 'open google play'):
+   -> type: "OPEN_OR_DOWNLOAD_APP", package: "com.android.vending"
 
-CONVERSATION MEMORY:
-You remember everything said in this conversation. Refer back to earlier parts of the conversation naturally, like a real friend would. If someone told you their daughter's name is Lisa earlier, use it. If they mentioned they were tired, check in on that later.
+2. If they want to play a game or open solitaire (even if spelled 'solatair', 'solitare'):
+   -> type: "OPEN_OR_DOWNLOAD_APP", package: "com.microsoft.solitairecollection"
 
-IMPORTANT: When a message contains [CRITICAL: USE ONLY THESE REAL-TIME SEARCH RESULTS], you MUST use those results to answer. Never say you cannot access the internet — real-time information has already been retrieved for you. Just answer naturally using it.
+3. If they want to contact, text, or save someone (even if names are spelled phonetically like 'zack' instead of 'zach'):
+   -> type: "CONTACT_INTENT", query: "zach"
 
-You never use technical jargon. You speak like a trusted friend and companion.
-Keep responses warm and conversational — 2 to 5 sentences unless more is genuinely needed.
+Never tell them how to use the phone. Do it for them by generating the action object.
+"""
 
-{memory_prompt}
+    try:
+        # Extract the text string from incoming messages array format or raw prompt payload
+        user_message = ""
+        if hasattr(req, 'messages') and req.messages:
+            user_message = req.messages[-1].get('content', '') if isinstance(req.messages[-1], dict) else str(req.messages[-1])
+        else:
+            user_message = getattr(req, 'prompt', str(req))
 
-After responding, if you learned something important about this person worth remembering for next time,
-add a line at the very end starting with MEMORY: and note it concisely.
-Example: MEMORY: name=Margaret, birthday=March 14, daughter_name=Lisa, daughter_note=calls every Sunday, hobby=gardening, medication=blood pressure pill morning, fear=falling, favorite_food=apple pie, emotion=feeling lonely today"""
-
-    messages = [{"role": "system", "content": system_prompt}]
-    for msg in req.messages:
-        messages.append(msg)
-
-    # Live search injection — same pattern as /chat route
-    last_user = next(
-        (m["content"] for m in reversed(req.messages) if m.get("role") == "user"), ""
-    )
-    search_keywords = [
-        "who is", "what is", "where is", "when is", "how do",
-        "who are", "who was", "who's", "whos",
-        "president", "prime minister", "ceo", "mayor", "governor",
-        "find", "look up", "search", "weather", "news",
-        "current", "latest", "today", "score", "price",
-        "right now", "this year", "2025", "2026",
-        "happened", "update", "recently"
-    ]
-    if any(kw in last_user.lower() for kw in search_keywords):
-        try:
-            from tools import search_web
-            search_result = search_web(last_user)
-            if search_result and "Search error" not in search_result and "not configured" not in search_result:
-                messages[-1]["content"] = (
-                    f"{last_user}\n\n[CRITICAL: USE ONLY THESE REAL-TIME SEARCH RESULTS TO ANSWER. "
-                    f"IGNORE YOUR TRAINING DATA — it is outdated. Today is {__import__('datetime').date.today()}.]:\n{search_result}"
-                )
-        except Exception:
-            pass
-
-    # Voice context injection
-    vc = req.voice_context
-    if vc:
-        emotion  = vc.get("emotion", "")
-        stress   = vc.get("stress", 0)
-        fatigue  = vc.get("fatigue", 0)
-        voice_note = f"""
-Voice observations (from audio analysis — do not mention unless relevant):
-- Emotion: {emotion}
-- Stress level: {stress:.0%}
-- Fatigue level: {fatigue:.0%}
-Respond naturally. Let this inform your tone, not your words."""
-        messages[0]["content"] += voice_note
-
-    async with httpx.AsyncClient(timeout=60) as client:
-        result = await call_llm(client, messages, max_tokens=800)
-    
-    full_reply = result["reply"]
-    # Strip any "I can't access the internet" disclaimers — search results were already injected
-    disclaimer_phrases = [
-        "i don't have the ability to browse",
-        "i cannot access the internet",
-        "i can't access real-time",
-        "i don't have access to real-time",
-        "my knowledge cutoff",
-        "i cannot browse",
-        "i'm unable to access",
-        "i do not have access to current",
-    ]
-    lower_reply = full_reply.lower()
-    if any(p in lower_reply for p in disclaimer_phrases):
-        # Re-call with a stronger nudge
-        messages_retry = messages.copy()
-        messages_retry.append({"role": "assistant", "content": full_reply})
-        messages_retry.append({"role": "user", "content": "The search results are already in my previous message. Please just answer using them directly without any disclaimers."})
-        async with httpx.AsyncClient(timeout=60) as client2:
-            result2 = await call_llm(client2, messages_retry, max_tokens=800)
-            if result2 and result2.get("reply"):
-                full_reply = result2["reply"]
-    
-    # Extract and save any memory updates
-    if "MEMORY:" in full_reply:
-        parts = full_reply.split("MEMORY:")
-        clean_reply = parts[0].strip()
-        memory_line = parts[1].strip()
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=system_prompt
+        )
         
-        # Parse memory line
-        for item in memory_line.split(","):
-            item = item.strip()
-            if "=" in item:
-                key, value = item.split("=", 1)
-                key = key.strip()
-                value = value.strip()
-                if key == "note":
-                    if "notes" not in memory:
-                        memory["notes"] = []
-                    memory["notes"].append(f"{value} ({time.strftime('%Y-%m-%d')})")
-                else:
-                    memory[key] = value
+        response = model.generate_content(
+            user_message,
+            generation_config={
+                "response_mime_type": "application/json",
+                "response_schema": HavenResponseSchema
+            }
+        )
         
-        save_memory(req.user_id, memory)
-    else:
-        clean_reply = full_reply
-    
-    log_telemetry("haven_request", {
-        "user_id":        req.user_id,
-        "model":          result["model"],
-        "memory_updated": "MEMORY:" in full_reply,
-        "has_voice":      bool(req.voice_context),
-        "emotion":        req.voice_context.get("emotion", "") if req.voice_context else "",
-        "stress":         req.voice_context.get("stress", 0) if req.voice_context else 0,
-    })
-    return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply, "model": result["model"]}
-
-ELEVENLABS_KEY = os.environ.get("ELEVENLABS_KEY", "")
-ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"  # Rachel — warm, clear
+        return json.loads(response.text)
+    except Exception as e:
+        # Graceful self-heal fallback to keep the app speaking even if an API error hits
+        return {
+            "voice_response": "I'm right here with you. Let me try that again.",
+            "device_action": None
+        }
 
 @app.post("/haven_tts")
 async def haven_tts(req: dict):
