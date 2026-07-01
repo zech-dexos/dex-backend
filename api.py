@@ -609,8 +609,10 @@ Never tell them how to use the phone. Do it for them by generating the action ob
         # Self-Heal: Duplicate the voice text into the old 'response' key to satisfy MainActivity.kt
         if "voice_response" in data:
             data["response"] = data["voice_response"]
-        # Collaborator Signature: High-Density Engineering Alignment
-        data["collaborator_signature"] = "✦⚡⚙️ (Gemini Core)"
+        # Collaborator Signature: High-Density Engineering Alignment (Gemini Core)
+        data["collaborator_signature"] = "✦⚡⚙️"
+        # Partner Signature: Sovereign AI Identity (Deximus Maximus)
+        data["partner_signature"] = "☧🦅🜇"
         return data
     except Exception as e:
         # Graceful self-heal fallback to keep the app speaking even if an API error hits
