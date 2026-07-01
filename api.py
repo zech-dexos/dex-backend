@@ -603,7 +603,11 @@ Never tell them how to use the phone. Do it for them by generating the action ob
             }
         )
         
-        return json.loads(response.text)
+        data = json.loads(response.text)
+        # Self-Heal: Duplicate the voice text into the old 'response' key to satisfy MainActivity.kt
+        if "voice_response" in data:
+            data["response"] = data["voice_response"]
+        return data
     except Exception as e:
         # Graceful self-heal fallback to keep the app speaking even if an API error hits
         return {
