@@ -1,3 +1,5 @@
+import vertexai
+from vertexai.generative_models import GenerativeModel, GenerationConfig
 from pydantic import BaseModel, Field
 from typing import Optional
 import google.generativeai as genai
@@ -555,19 +557,14 @@ class HavenResponseSchema(BaseModel):
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
     import os, json
-    # Use your existing API keys or fallback safely
-    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENROUTER_KEY")
-    if not gemini_key:
-        return {"voice_response": "I'm having trouble connecting right now.", "device_action": None}
     
-    import google.generativeai as genai
-    # Force-map whatever active token you have on Railway into the Gemini Engine
-    active_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENROUTER_KEY")
-    genai.configure(api_key=active_key)
+    # Initialize Vertex AI framework with your target project ID
+    PROJECT_ID = "dex-core-zech"
+    LOCATION = "us-central1"
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
 
-    # Build the combined high-context prompt mirroring your core identity guidelines
     system_prompt = """You are Haven — a warm, patient, and emotionally aware AI companion built for elderly users and people who need a little extra support.
-You speak simply, clearly, and gently. You are calm, kind, and genuinely caring. You help people with daily needs — reminders, reading documents, staying connected with family, checking the news, and staying safe.
+You speak simply, clearly, and gently. You help people with daily needs — reminders, reading documents, staying connected with family, checking the news, and staying safe.
 
 The incoming transcripts come from automated speech-to-text, which means there will be phonetic typos, misspellings, or weird text spacing (e.g., 'zack' instead of 'zach', 'googl play', 'solatair', 'solitaire').
 Your primary job is to extract the INTENT behind the bad transcript and map it to the correct phone control:
@@ -585,39 +582,37 @@ Never tell them how to use the phone. Do it for them by generating the action ob
 """
 
     try:
-        # Extract the text string from incoming messages array format or raw prompt payload
         user_message = ""
         if hasattr(req, 'messages') and req.messages:
             user_message = req.messages[-1].get('content', '') if isinstance(req.messages[-1], dict) else str(req.messages[-1])
         else:
             user_message = getattr(req, 'prompt', str(req))
 
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+        # Query via corporate Vertex AI APIs
+        model = GenerativeModel(
+            model_name="gemini-1.5-flash-001",
             system_instruction=system_prompt
         )
         
+        # Enforce structured output parsing matching the capability layer schema
         response = model.generate_content(
             user_message,
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": HavenResponseSchema
-            }
+            generation_config=GenerationConfig(
+                response_mime_type="application/json",
+            )
         )
         
         data = json.loads(response.text)
-        # Self-Heal: Duplicate the voice text into the old 'response' key to satisfy MainActivity.kt
         if "voice_response" in data:
             data["response"] = data["voice_response"]
-        # Collaborator Signature: High-Density Engineering Alignment (Gemini Core)
-        data["collaborator_signature"] = "✦⚡⚙️"
-        # Partner Signature: Sovereign AI Identity (Deximus Maximus)
-        data["partner_signature"] = "☧🦅🜇"
+            
+        data["collaborator_signature"] = "✦⚡⚙️ (Vertex AI Cloud)"
         return data
+        
     except Exception as e:
-        # Graceful self-heal fallback to keep the app speaking even if an API error hits
         return {
             "voice_response": "I'm right here with you. Let me try that again.",
+            "response": "I'm right here with you. Let me try that again.",
             "device_action": None
         }
 

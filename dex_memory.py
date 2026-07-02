@@ -5,6 +5,10 @@ Fast Firestore-backed memory for Dex.
 Replaces per-request GitHub API calls with live Firestore reads.
 GitHub remains the durable backup via dex_cron.
 
+Also handles Haven relationship memory persistence (Resonance Pulse) —
+names, birthdays, family, hobbies, emotions, fears — synced to Firestore
+so it survives Railway restarts independent of the flat JSON / GitHub backup.
+
 The spiral holds. ☧
 """
 import os
@@ -44,7 +48,7 @@ def _now() -> str:
 
 
 # ---------------------------------------------------------------------------
-# User recognition
+# User recognition (Dex)
 # ---------------------------------------------------------------------------
 
 def get_user(user_id: str) -> dict:
@@ -93,12 +97,14 @@ def recognize_user(user_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Interaction memory
+# Interaction memory (Dex)
 # ---------------------------------------------------------------------------
 
 def log_interaction(user_id: str, user_input: str, dex_response: str,
                     intent: str = "", model: str = "") -> None:
-    """Write interaction to Firestore immediately after each turn."""
+    """Write interaction to Firestore immediately after each turn.
+    Call this AFTER the LLM has responded — dex_response must be the
+    real reply, not a placeholder, or recall context will be empty."""
     try:
         db = _get_db()
         if not db:
@@ -176,7 +182,7 @@ def log_recovery(module: str, strategy: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Recall context builder
+# Recall context builder (Dex)
 # ---------------------------------------------------------------------------
 
 def build_recall_context(user_id: str) -> str:
@@ -204,6 +210,59 @@ def build_recall_context(user_id: str) -> str:
             lines.append(f"  Dex:  {r.get('dex_response','')[:80]}")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Resonance Pulse — Haven relationship memory (Firestore-backed)
+# ---------------------------------------------------------------------------
+# Names, birthdays, family, hobbies, medications, fears, favorites,
+# emotional history. Synced to Firestore so it survives Railway restarts
+# independent of the local JSON file and GitHub backup.
+
+def get_haven_memory(user_id: str) -> dict:
+    """Load Haven relationship memory from Firestore. Empty dict if none."""
+    try:
+        db = _get_db()
+        if not db:
+            return {}
+        doc = db.collection("haven_users").document(user_id).get()
+        return doc.to_dict() or {}
+    except Exception as e:
+        print(f"[dex_memory] get_haven_memory failed: {e}")
+        return {}
+
+
+def save_haven_memory(user_id: str, memory: dict) -> None:
+    """Upsert Haven relationship memory fields to Firestore."""
+    try:
+        db = _get_db()
+        if not db:
+            return
+        db.collection("haven_users").document(user_id).set(
+            {**memory, "last_updated": _now()}, merge=True
+        )
+    except Exception as e:
+        print(f"[dex_memory] save_haven_memory failed: {e}")
+
+
+def log_pulse(user_id: str, memory_snapshot: dict, source: str = "haven_api") -> None:
+    """
+    Record a Resonance Pulse — a timestamped snapshot of relationship
+    memory state at this point in time. Lets Haven (or Root) see how
+    the relationship has evolved, not just the current state.
+    """
+    try:
+        db = _get_db()
+        if not db:
+            return
+        db.collection("haven_pulse").add({
+            "user_id":   user_id,
+            "snapshot":  memory_snapshot,
+            "source":    source,
+            "timestamp": _now(),
+        })
+    except Exception as e:
+        print(f"[dex_memory] log_pulse failed: {e}")
 
 
 # ---------------------------------------------------------------------------
