@@ -578,7 +578,7 @@ async def haven_api(req: HavenRequest):
     import os, json
     
     # Initialize Vertex AI — credentials set at startup via FIREBASE_KEY_B64
-    PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "dex-core-zech")
+    PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "haven-dexos")
     LOCATION = "us-central1"
     try:
         vertexai.init(project=PROJECT_ID, location=LOCATION)
