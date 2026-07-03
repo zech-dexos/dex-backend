@@ -24,10 +24,29 @@ except ImportError:
     SIGIL_ACTIVE = False
     _memory = None
 
-# Firestore telemetry — XPRIZE requirement C
+# Firestore + Vertex AI auth — XPRIZE requirements A and C
 import firebase_admin
 from firebase_admin import credentials, firestore as fs
 import datetime
+import base64, tempfile, os
+
+def _setup_gcp_credentials():
+    """Decode FIREBASE_KEY_B64 and set GOOGLE_APPLICATION_CREDENTIALS for Vertex AI."""
+    key_b64 = os.environ.get("FIREBASE_KEY_B64", "")
+    if not key_b64:
+        return
+    try:
+        key_json = base64.b64decode(key_b64).decode("utf-8")
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        tmp.write(key_json)
+        tmp.flush()
+        tmp.close()
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
+        print(f"[GCP] credentials set from FIREBASE_KEY_B64")
+    except Exception as e:
+        print(f"[GCP] credential setup failed: {e}")
+
+_setup_gcp_credentials()
 
 _fb_app = None
 _firestore = None
@@ -558,10 +577,13 @@ class HavenResponseSchema(BaseModel):
 async def haven_api(req: HavenRequest):
     import os, json
     
-    # Initialize Vertex AI framework with your target project ID
-    PROJECT_ID = "dex-core-zech"
+    # Initialize Vertex AI — credentials set at startup via FIREBASE_KEY_B64
+    PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "dex-core-zech")
     LOCATION = "us-central1"
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+    except Exception as e:
+        print(f"[Vertex] init warning: {e}")
 
     system_prompt = """You are Haven — a warm, patient, and emotionally aware AI companion built for elderly users and people who need a little extra support.
 You speak simply, clearly, and gently. You help people with daily needs — reminders, reading documents, staying connected with family, checking the news, and staying safe.
