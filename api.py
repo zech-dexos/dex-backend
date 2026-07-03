@@ -632,9 +632,10 @@ Never tell them how to use the phone. Do it for them by generating the action ob
         return data
         
     except Exception as e:
+        print(f"[haven_api ERROR] {type(e).__name__}: {e}")
         return {
             "voice_response": "I'm right here with you. Let me try that again.",
-            "response": "I'm right here with you. Let me try that again.",
+            "response": f"ERROR: {type(e).__name__}: {str(e)[:200]}",
             "device_action": None
         }
 
