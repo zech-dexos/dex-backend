@@ -615,7 +615,7 @@ ACTION:{{"type":"OPEN_APP","package":"com.android.vending","query":""}}
 
 Action types:
 - OPEN_APP — open/launch any app (set package to Android package name)
-- SEARCH_PLAY — find or install an app (set query to app name)
+- SEARCH_PLAY — find or install an app (set query to app name). Use this for download/install requests, NOT OPEN_APP. Always set query to the app name.
 - CALL — call someone (set query to contact name or number)
 - SMS — text someone (set query to contact name)
 - OPEN_FILES — open downloads/files (package="com.android.documentsui")
