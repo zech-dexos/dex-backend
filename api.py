@@ -1,9 +1,5 @@
-try:
-    import vertexai
-    from vertexai.generative_models import GenerativeModel, GenerationConfig
-    VERTEX_AVAILABLE = True
-except ImportError:
-    VERTEX_AVAILABLE = False
+import vertexai
+from vertexai.generative_models import GenerativeModel, GenerationConfig
 from pydantic import BaseModel, Field
 from typing import Optional
 import google.generativeai as genai
@@ -579,13 +575,6 @@ class HavenResponseSchema(BaseModel):
 
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
-    import traceback
-    try:
-        return await _haven_api_inner(req)
-    except Exception as e:
-        return {"response": "I am right here with you.", "error": str(e), "trace": traceback.format_exc()}
-
-async def _haven_api_inner(req: HavenRequest):
     if not GEMINI_KEY and not OPENROUTER_KEY:
         return {"response": "I'm having trouble connecting right now."}
 
@@ -610,30 +599,7 @@ Keep responses warm and conversational — 2 to 5 sentences unless more is neede
 {memory_prompt}
 
 After responding, if you learned something worth remembering, add at the very end:
-MEMORY: name=Margaret, daughter_name=Lisa, hobby=gardening, emotion=lonely today
-DEVICE ACTIONS:
-If the user wants to open an app, find an app, make a call, send a text, or do anything on their phone, include an ACTION tag on its own line at the very end of your response.
-
-Format exactly like this:
-ACTION:{"type":"OPEN_APP","package":"com.android.vending","query":""}
-
-Action types:
-- OPEN_APP — open/launch any app (set package to Android package name)
-- SEARCH_PLAY — find or install an app (set query to app name)
-- CALL — call someone (set query to contact name or number)
-- SMS — text someone (set query to contact name)
-- OPEN_FILES — open downloads/files (package="com.android.documentsui")
-- OPEN_SETTINGS — open phone settings
-
-Common packages:
-com.android.vending=Google Play, com.google.android.youtube=YouTube,
-com.spotify.music=Spotify, com.facebook.katana=Facebook,
-com.google.android.apps.maps=Maps, com.google.android.apps.messaging=Messages,
-com.microsoft.solitairecollection=Solitaire, com.android.documentsui=Files/Downloads,
-com.android.camera2=Camera, com.google.android.gm=Gmail, com.android.chrome=Chrome
-
-Only include ACTION tag when the user wants to DO something on their phone. Never include it for conversation.
-"""
+MEMORY: name=Margaret, daughter_name=Lisa, hobby=gardening, emotion=lonely today"""
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in req.messages:
@@ -707,25 +673,7 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
         "stress": req.voice_context.get("stress",0) if req.voice_context else 0,
     })
 
-    # Parse ACTION tag from Gemini reply
-    device_action = None
-    if "ACTION:" in clean_reply:
-        try:
-            action_parts = clean_reply.split("ACTION:")
-            clean_reply = action_parts[0].strip()
-            action_json_str = action_parts[1].strip().split("\n")[0].strip()
-            import json as _json
-            device_action = _json.loads(action_json_str)
-        except Exception:
-            device_action = None
-
-    return {
-        "response": clean_reply,
-        "voice_response": clean_reply,
-        "device_action": device_action,
-        "memory_updated": "MEMORY:" in full_reply,
-        "model": result["model"]
-    }
+    return {"response": clean_reply, "memory_updated": "MEMORY:" in full_reply, "model": result["model"]}
 
 @app.post("/haven_tts")
 async def haven_tts(req: dict):
@@ -919,12 +867,3 @@ def _background_pulse_loop():
 _pulse_thread = threading.Thread(target=_background_pulse_loop, daemon=True)
 _pulse_thread.start()
 print("☧ Dex background pulse thread started. The spiral holds.")
-
-@app.post("/haven_debug")
-async def haven_debug(req: dict):
-    import traceback
-    try:
-        memory = load_memory(req.get("user_id", "test"))
-        return {"ok": True, "memory_keys": list(memory.keys())}
-    except Exception as e:
-        return {"error": str(e), "trace": traceback.format_exc()}
