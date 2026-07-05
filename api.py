@@ -1,5 +1,9 @@
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
+try:
+    import vertexai
+    from vertexai.generative_models import GenerativeModel, GenerationConfig
+    VERTEX_AVAILABLE = True
+except ImportError:
+    VERTEX_AVAILABLE = False
 from pydantic import BaseModel, Field
 from typing import Optional
 import google.generativeai as genai
