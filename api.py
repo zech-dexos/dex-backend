@@ -917,7 +917,6 @@ print("☧ Dex background pulse thread started. The spiral holds.")
 async def haven_debug(req: dict):
     import traceback
     try:
-        from haven_memory import load_memory, save_memory, memory_to_prompt
         memory = load_memory(req.get("user_id", "test"))
         return {"ok": True, "memory_keys": list(memory.keys())}
     except Exception as e:
