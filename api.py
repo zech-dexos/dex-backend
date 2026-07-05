@@ -623,7 +623,7 @@ Keep responses natural and conversational — 2 to 4 sentences usually. Never ro
 After responding, if you learned something worth remembering, add at the very end:
 MEMORY: name=Margaret, daughter_name=Lisa, hobby=gardening, emotion=lonely today
 DEVICE ACTIONS:
-If the user wants to open an app, find an app, make a call, send a text, or do anything on their phone, include an ACTION tag on its own line at the very end of your response.
+ONLY include an ACTION tag when the user is CLEARLY and DIRECTLY requesting you to perform a phone action RIGHT NOW — like "open Google Play", "call my daughter", "download solitaire". Do NOT include an ACTION tag if the user is just talking about phones, apps, or people in conversation. When in doubt, do NOT include an ACTION tag.
 
 Format exactly like this:
 ACTION:{{"type":"OPEN_APP","package":"com.android.vending","query":""}}
