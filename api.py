@@ -579,6 +579,13 @@ class HavenResponseSchema(BaseModel):
 
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
+    import traceback
+    try:
+        return await _haven_api_inner(req)
+    except Exception as e:
+        return {"response": "I am right here with you.", "error": str(e), "trace": traceback.format_exc()}
+
+async def _haven_api_inner(req: HavenRequest):
     if not GEMINI_KEY and not OPENROUTER_KEY:
         return {"response": "I'm having trouble connecting right now."}
 
