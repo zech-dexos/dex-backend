@@ -611,7 +611,7 @@ DEVICE ACTIONS:
 If the user wants to open an app, find an app, make a call, send a text, or do anything on their phone, include an ACTION tag on its own line at the very end of your response.
 
 Format exactly like this:
-ACTION:{"type":"OPEN_APP","package":"com.android.vending","query":""}
+ACTION:{{"type":"OPEN_APP","package":"com.android.vending","query":""}}
 
 Action types:
 - OPEN_APP — open/launch any app (set package to Android package name)
