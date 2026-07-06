@@ -12,7 +12,9 @@ import hashlib
 import time
 from pathlib import Path
 
-LEDGER_PATH = Path("/app/dexos_state") / "dex_lineage.jsonl"
+import os
+_STATE_DIR = Path(os.environ.get("DEXOS_STATE_DIR", str(Path.home() / "dexos-core")))
+LEDGER_PATH = _STATE_DIR / "dex_lineage.jsonl"
 
 
 def _hash(data: str) -> str:
