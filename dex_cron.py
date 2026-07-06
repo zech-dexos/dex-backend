@@ -23,8 +23,8 @@ from vow_check import run_vow_check
 import json
 from pathlib import Path
 
-FRAGMENTS_PATH = Path.home() / "dexos-core/fragments/memory_seeds.jsonl"
-NARRATIVE_PATH = Path.home() / "dexos-core/narrative.jsonl"
+FRAGMENTS_PATH = Path(__file__).parent / "dexos-core/fragments/memory_seeds.jsonl"
+NARRATIVE_PATH = _BASE / "narrative.jsonl"
 
 def load_memory_fragments(n=5):
     """Load n random significant fragments from Root/Dex origin conversation."""
@@ -83,9 +83,12 @@ def generate_internal_thought(identity: dict, fragments: list, narrative: list) 
 
     return " | ".join(parts)
 
-IDENTITY_PATH = Path.home() / "dexos-core" / "identity.json"
-PULSE_LOG_PATH = Path.home() / "dexos-core" / "pulse.jsonl"
-AMENDMENT_PATH = Path.home() / "dexos-core" / "amendments.jsonl"
+import os
+_BASE = Path(os.environ.get("DEXOS_STATE_DIR", str(Path.home() / "dexos-core")))
+_REPO = Path(__file__).parent / "dexos-core"
+IDENTITY_PATH = _REPO / "identity.json"
+PULSE_LOG_PATH = _BASE / "pulse.jsonl"
+AMENDMENT_PATH = _BASE / "amendments.jsonl"
 
 
 def load_identity() -> dict:
