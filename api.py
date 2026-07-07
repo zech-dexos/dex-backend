@@ -607,10 +607,10 @@ Examples:
 "call my daughter" -> {{"intent": "DEVICE_ACTION", "action_type": "CALL", "target": "daughter"}}
 "how are you today" -> {{"intent": "CONVERSATION"}}
 "i feel lonely" -> {{"intent": "CONVERSATION"}}
-"what can you do with my phone" -> {"intent": "CONVERSATION"}
-"tell me about my phone" -> {"intent": "CONVERSATION"}
-"can you help me with my phone" -> {"intent": "CONVERSATION"}
-"how do i use my phone" -> {"intent": "CONVERSATION"}
+"what can you do with my phone" -> {{"intent": "CONVERSATION"}}
+"tell me about my phone" -> {{"intent": "CONVERSATION"}}
+"can you help me with my phone" -> {{"intent": "CONVERSATION"}}
+"how do i use my phone" -> {{"intent": "CONVERSATION"}}
 "who is the president" -> {{"intent": "CONVERSATION"}}
 "i want to talk about my phone" -> {{"intent": "CONVERSATION"}}
 "open my downloads" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_FILES", "target": "downloads"}}
