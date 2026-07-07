@@ -609,7 +609,7 @@ JSON:"""
     try:
         res = await client.post(
             GROQ_URL,
-            headers={{"Authorization": f"Bearer {{GROQ_KEY}}", "Content-Type": "application/json"}},
+            headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"},
             json={{"model": GROQ_MODEL, "messages": [{{"role": "user", "content": prompt}}], "max_tokens": 60}}
         )
         data = res.json()
@@ -618,7 +618,7 @@ JSON:"""
         import json as _json
         return _json.loads(text)
     except Exception:
-        return {{"intent": "CONVERSATION"}}
+        return {"intent": "CONVERSATION"}
 
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
