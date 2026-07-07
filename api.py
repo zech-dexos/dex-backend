@@ -573,6 +573,53 @@ class HavenResponseSchema(BaseModel):
     voice_response: str = Field(description="Deeply empathetic, warm, comforting spoken line to say to the user.")
     device_action: Optional[DeviceActionSchema] = Field(None, description="The hardware action. Set to null if just chatting.")
 
+
+async def talnir_classify(client, message: str) -> dict:
+    """
+    Talnir: Fast intent classifier.
+    Translates messy human speech into clean structured intent.
+    Returns: {intent: DEVICE_ACTION|CONVERSATION, action_type, target}
+    """
+    if not GROQ_KEY:
+        return {"intent": "CONVERSATION"}
+    prompt = f"""You are Talnir, an intent classifier. Your ONLY job is to classify what the user wants.
+
+Output ONLY valid JSON. Nothing else. No explanation.
+
+If the user wants to DO something on their phone (open app, call someone, send text, download something, change settings):
+{{"intent": "DEVICE_ACTION", "action_type": "OPEN_APP|SEARCH_PLAY|CALL|SMS|OPEN_FILES|OPEN_SETTINGS", "target": "what they want"}}
+
+If the user is talking, asking questions, sharing feelings, or having a conversation:
+{{"intent": "CONVERSATION"}}
+
+Examples:
+"open google play" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_APP", "target": "google play"}}
+"can you get me solitaire" -> {{"intent": "DEVICE_ACTION", "action_type": "SEARCH_PLAY", "target": "solitaire"}}
+"call my daughter" -> {{"intent": "DEVICE_ACTION", "action_type": "CALL", "target": "daughter"}}
+"how are you today" -> {{"intent": "CONVERSATION"}}
+"i feel lonely" -> {{"intent": "CONVERSATION"}}
+"what can you do with my phone" -> {{"intent": "CONVERSATION"}}
+"who is the president" -> {{"intent": "CONVERSATION"}}
+"i want to talk about my phone" -> {{"intent": "CONVERSATION"}}
+"open my downloads" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_FILES", "target": "downloads"}}
+
+User said: "{message}"
+JSON:"""
+
+    try:
+        res = await client.post(
+            GROQ_URL,
+            headers={{"Authorization": f"Bearer {{GROQ_KEY}}", "Content-Type": "application/json"}},
+            json={{"model": GROQ_MODEL, "messages": [{{"role": "user", "content": prompt}}], "max_tokens": 60}}
+        )
+        data = res.json()
+        text = data.get("choices", [{{}}])[0].get("message", {{}}).get("content", "")
+        text = text.strip()
+        import json as _json
+        return _json.loads(text)
+    except Exception:
+        return {{"intent": "CONVERSATION"}}
+
 @app.post("/haven_api")
 async def haven_api(req: HavenRequest):
     import traceback
@@ -587,6 +634,10 @@ async def _haven_api_inner(req: HavenRequest):
 
     memory = load_memory(req.user_id)
     memory_prompt = memory_to_prompt(memory)
+    # If we know this person, tell Kalimi to greet them like she remembers them
+    memory_greeting = ""
+    if memory.get("name"):
+        memory_greeting = f"\nYou know this person. Their name is {memory['name']}. Greet them warmly by name like you remember them. Reference something you know about them naturally if it fits."
 
     system_prompt = f"""Your name is Kalimi. You are a warm, soulful southern woman — a guardian angel companion built for people who need someone truly present with them.
 
@@ -618,7 +669,7 @@ IMPORTANT: When a message contains [CRITICAL: USE ONLY THESE REAL-TIME SEARCH RE
 You never use technical jargon. Ever. Speak plain, warm, human.
 Keep responses natural and conversational — 2 to 4 sentences usually. Never robotic. Never generic.
 
-{memory_prompt}
+{memory_prompt}{memory_greeting}
 
 After responding, if you learned something worth remembering, add at the very end:
 MEMORY: name=Margaret, daughter_name=Lisa, hobby=gardening, emotion=lonely today
@@ -651,6 +702,15 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
         messages.append(msg)
 
     last_user = next((m["content"] for m in reversed(req.messages) if m.get("role") == "user"), "")
+
+    # Talnir: classify intent before Kalimi sees the message
+    talnir_result = await talnir_classify(client, last_user)
+    is_device_action = talnir_result.get("intent") == "DEVICE_ACTION"
+
+    # If conversation only — remove ACTION instructions from prompt so Kalimi never triggers accidentally
+    if not is_device_action:
+        system_prompt = system_prompt.split("DEVICE ACTIONS:")[0].strip()
+
     search_keywords = ["who is","what is","weather","news","current","latest","today","score","price"]
     if any(kw in last_user.lower() for kw in search_keywords):
         try:
