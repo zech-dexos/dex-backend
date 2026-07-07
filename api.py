@@ -574,7 +574,7 @@ class HavenResponseSchema(BaseModel):
     device_action: Optional[DeviceActionSchema] = Field(None, description="The hardware action. Set to null if just chatting.")
 
 
-async def talnir_classify(client, message: str) -> dict:
+async def talnir_classify(client, message: str, user_id: str = "default") -> dict:
     """
     Talnir: Fast intent classifier.
     Translates messy human speech into clean structured intent.
@@ -582,6 +582,15 @@ async def talnir_classify(client, message: str) -> dict:
     """
     if not GROQ_KEY:
         return {"intent": "CONVERSATION"}
+
+    # Load this user's installed apps
+    user_apps = load_user_apps(user_id)
+    app_list_str = ""
+    if user_apps:
+        app_list_str = "\nINSTALLED APPS ON THIS DEVICE:\n"
+        for app in user_apps[:50]:  # limit to 50
+            app_list_str += f"- {app.get('label','')}: {app.get('package','')}\n"
+
     prompt = f"""You are Talnir, an intent classifier. Your ONLY job is to classify what the user wants.
 
 Output ONLY valid JSON. Nothing else. No explanation.
@@ -606,6 +615,7 @@ Examples:
 "i want to talk about my phone" -> {{"intent": "CONVERSATION"}}
 "open my downloads" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_FILES", "target": "downloads"}}
 
+{app_list_str}
 User said: "{message}"
 JSON:"""
 
@@ -708,7 +718,7 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
 
     # Talnir: classify intent before Kalimi sees the message
     async with httpx.AsyncClient(timeout=15) as talnir_client:
-        talnir_result = await talnir_classify(talnir_client, last_user)
+        talnir_result = await talnir_classify(talnir_client, last_user, req.user_id)
     is_device_action = talnir_result.get("intent") == "DEVICE_ACTION"
 
     # If conversation only — remove ACTION instructions from prompt so Kalimi never triggers accidentally
