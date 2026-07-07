@@ -605,6 +605,10 @@ Examples:
 "open google play" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_APP", "target": "google play"}}
 "can you get me solitaire" -> {{"intent": "DEVICE_ACTION", "action_type": "SEARCH_PLAY", "target": "solitaire"}}
 "call my daughter" -> {{"intent": "DEVICE_ACTION", "action_type": "CALL", "target": "daughter"}}
+"call 555-1234" -> {{"intent": "DEVICE_ACTION", "action_type": "CALL", "target": "555-1234"}}
+"who should i call" -> {{"intent": "CONVERSATION"}}
+"should i call my mom or dad" -> {{"intent": "CONVERSATION"}}
+"i want to talk about calling someone" -> {{"intent": "CONVERSATION"}}
 "how are you today" -> {{"intent": "CONVERSATION"}}
 "i feel lonely" -> {{"intent": "CONVERSATION"}}
 "what can you do with my phone" -> {{"intent": "CONVERSATION"}}
