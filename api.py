@@ -598,7 +598,10 @@ Examples:
 "call my daughter" -> {{"intent": "DEVICE_ACTION", "action_type": "CALL", "target": "daughter"}}
 "how are you today" -> {{"intent": "CONVERSATION"}}
 "i feel lonely" -> {{"intent": "CONVERSATION"}}
-"what can you do with my phone" -> {{"intent": "CONVERSATION"}}
+"what can you do with my phone" -> {"intent": "CONVERSATION"}
+"tell me about my phone" -> {"intent": "CONVERSATION"}
+"can you help me with my phone" -> {"intent": "CONVERSATION"}
+"how do i use my phone" -> {"intent": "CONVERSATION"}
 "who is the president" -> {{"intent": "CONVERSATION"}}
 "i want to talk about my phone" -> {{"intent": "CONVERSATION"}}
 "open my downloads" -> {{"intent": "DEVICE_ACTION", "action_type": "OPEN_FILES", "target": "downloads"}}
@@ -798,6 +801,46 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
         "memory_updated": "MEMORY:" in full_reply,
         "model": result["model"]
     }
+
+
+@app.post("/haven_apps")
+async def haven_apps(req: dict):
+    """Receive installed app list from Android device and store per user."""
+    user_id = req.get("user_id", "default")
+    apps = req.get("apps", [])
+    if not apps:
+        return {"status": "no apps"}
+    # Store as simple JSON file per user
+    import json as _json
+    apps_dir = Path("haven_memory")
+    apps_dir.mkdir(exist_ok=True)
+    apps_path = apps_dir / f"{user_id}_apps.json"
+    apps_path.write_text(_json.dumps(apps))
+    return {"status": "ok", "count": len(apps)}
+
+def load_user_apps(user_id: str) -> list:
+    """Load installed apps for a user."""
+    try:
+        apps_path = Path("haven_memory") / f"{user_id}_apps.json"
+        if apps_path.exists():
+            import json as _json
+            return _json.loads(apps_path.read_text())
+    except Exception:
+        pass
+    return []
+
+def find_app_package(user_id: str, query: str) -> str:
+    """Find best matching package for a query from user's installed apps."""
+    apps = load_user_apps(user_id)
+    if not apps:
+        return ""
+    query_lower = query.lower()
+    for app in apps:
+        label = app.get("label", "").lower()
+        pkg = app.get("package", "").lower()
+        if query_lower in label or query_lower in pkg:
+            return app.get("package", "")
+    return ""
 
 @app.post("/haven_tts")
 async def haven_tts(req: dict):
