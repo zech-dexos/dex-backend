@@ -704,7 +704,8 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
     last_user = next((m["content"] for m in reversed(req.messages) if m.get("role") == "user"), "")
 
     # Talnir: classify intent before Kalimi sees the message
-    talnir_result = await talnir_classify(client, last_user)
+    async with httpx.AsyncClient(timeout=15) as talnir_client:
+        talnir_result = await talnir_classify(talnir_client, last_user)
     is_device_action = talnir_result.get("intent") == "DEVICE_ACTION"
 
     # If conversation only — remove ACTION instructions from prompt so Kalimi never triggers accidentally
