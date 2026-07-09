@@ -856,6 +856,29 @@ def find_app_package(user_id: str, query: str) -> str:
             return app.get("package", "")
     return ""
 
+
+@app.post("/haven_session")
+async def save_session(req: dict):
+    """Save conversation summary at session end."""
+    user_id = req.get("user_id", "default")
+    summary = req.get("summary", "")
+    if not summary:
+        return {"status": "no summary"}
+    memory = load_memory(user_id)
+    memory["last_session_summary"] = summary
+    memory["last_seen"] = __import__("time").strftime("%Y-%m-%d")
+    save_memory(user_id, memory)
+    return {"status": "ok"}
+
+@app.get("/haven_session")
+async def get_session(user_id: str = "default"):
+    """Load last session summary."""
+    memory = load_memory(user_id)
+    return {
+        "summary": memory.get("last_session_summary", ""),
+        "last_seen": memory.get("last_seen", "")
+    }
+
 @app.post("/haven_tts")
 async def haven_tts(req: dict):
     text = req.get("text", "")
