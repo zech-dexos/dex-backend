@@ -28,10 +28,12 @@ async def on_message(message):
         return
 
     channel_id = str(message.channel.id)
-    if channel_id not in conversation_history:
-        conversation_history[channel_id] = []
+    user_id = str(message.author.id)
+    session_key = f"{user_id}:{channel_id}"
+    if session_key not in conversation_history:
+        conversation_history[session_key] = []
 
-    history = conversation_history[channel_id]
+    history = conversation_history[session_key]
 
     async with message.channel.typing():
         try:
@@ -47,7 +49,7 @@ async def on_message(message):
             history.append({"role": "user", "content": message.content})
             history.append({"role": "assistant", "content": reply})
             if len(history) > 20:
-                conversation_history[channel_id] = history[-20:]
+                conversation_history[session_key] = history[-20:]
 
             # Split long replies into chunks
             if len(reply) <= 2000:
