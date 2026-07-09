@@ -1018,8 +1018,15 @@ async def save_profile(req: ProfileRequest):
 async def get_profile(user_id: str = "default"):
     memory = load_memory(user_id)
     return {
-        "name": memory.get("profile_name", ""),
-        "preferences": memory.get("preferences", {})
+        "name": memory.get("name", memory.get("profile_name", "")),
+        "preferences": memory.get("preferences", {}),
+        "hobbies": memory.get("hobbies", []),
+        "family": memory.get("family", {}),
+        "medications": memory.get("medications", []),
+        "notes": memory.get("notes", []),
+        "emotional_history": memory.get("emotional_history", []),
+        "favorites": memory.get("favorites", {}),
+        "has_memory": bool(memory)
     }
 
 
