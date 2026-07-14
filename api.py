@@ -729,7 +729,7 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
     if not is_device_action:
         system_prompt = system_prompt.split("DEVICE ACTIONS:")[0].strip()
 
-    search_keywords = ["who is","what is","weather","news","current","latest","today","score","price"]
+    search_keywords = ["who is","what is","weather","news","current","latest","today","score","price","what year","what date","right now","this year","2024","2025","2026","president","prime minister","who won","what happened"]
     if any(kw in last_user.lower() for kw in search_keywords):
         try:
             from tools import search_web
