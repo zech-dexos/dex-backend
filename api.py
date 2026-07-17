@@ -482,6 +482,94 @@ def save_memory(user_id: str, memory: dict):
         except Exception as e:
             print(f"GitHub memory save error: {e}")
 
+def apply_memory_line(memory: dict, memory_line: str, user_id: str):
+    """Parse a comma-separated key=value memory line, merge into memory dict, save."""
+    for item in memory_line.split(","):
+        item = item.strip()
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        key = key.strip().lower().replace(" ", "_")
+        value = value.strip()
+        if not value or value.upper() == "NONE":
+            continue
+        if key == "note":
+            memory.setdefault("notes", []).append(f"{value} ({time.strftime('%Y-%m-%d')})")
+        elif key in ("hobby","hobbies"):
+            memory.setdefault("hobbies", [])
+            if value not in memory["hobbies"]: memory["hobbies"].append(value)
+        elif key in ("medication","medications","med"):
+            memory.setdefault("medications", [])
+            if value not in memory["medications"]: memory["medications"].append(value)
+        elif key in ("fear","fears"):
+            memory.setdefault("fears", [])
+            if value not in memory["fears"]: memory["fears"].append(value)
+        elif key == "emotion":
+            memory.setdefault("emotional_history", []).append(f"{value} ({time.strftime('%Y-%m-%d')})")
+            memory["emotional_history"] = memory["emotional_history"][-10:]
+        elif key.startswith("favorite_"):
+            memory.setdefault("favorites", {})[key.replace("favorite_","")] = value
+        elif "_" in key and key.split("_")[0] in ("daughter","son","wife","husband","sister","brother","mother","father","friend","caregiver","doctor","grandson","granddaughter"):
+            rel, field = key.split("_", 1)
+            memory.setdefault("family", {}).setdefault(rel, {})[field] = value
+        elif key in ("event","appointment","appointments"):
+            memory.setdefault("events", []).append(f"{value} (noted {time.strftime('%Y-%m-%d')})")
+            memory["events"] = memory["events"][-20:]
+        elif key == "pet":
+            memory.setdefault("pets", []).append(f"{value} (noted {time.strftime('%Y-%m-%d')})")
+        else:
+            memory[key] = value
+    save_memory(user_id, memory)
+
+
+async def extract_memory_facts(client, user_said: str, kalimi_said: str, user_id: str) -> str:
+    """
+    Dedicated memory-extraction pass. Runs every turn independent of Kalimi's
+    conversational reply, so short/warm replies never cost us a fact worth remembering.
+    Uses Groq (same as Talnir) since it is already proven fast and cheap in this pipeline.
+    Returns a key=value,key=value line, or "" if nothing worth remembering.
+    """
+    if not GROQ_KEY:
+        return ""
+    prompt = f"""You are a memory extractor for an elder companion AI. Your ONLY job is to notice facts worth remembering long-term from what the user just said.
+
+Extract things like: medications and doses, doctor appointments or health events, pets (names, status like lost/found/sick), family members and relationship details, hobbies, fears or worries, emotional state, favorites, anything a real companion would remember days later.
+
+Do NOT extract small talk, greetings, or anything with no lasting relevance.
+
+Output format: comma-separated key=value pairs, using these keys when they fit:
+note=..., medication=..., event=..., pet=..., fear=..., hobby=..., emotion=..., favorite_X=..., daughter_name=... (or son/wife/husband/etc), otherwise a short custom key=value.
+
+If NOTHING is worth remembering from this message, output exactly: NONE
+
+Examples:
+User said: "I lost my cat Whiskers yesterday, I'm so worried"
+Output: pet=Whiskers is missing since yesterday,emotion=worried
+
+User said: "I take my blood pressure pill every morning at 8"
+Output: medication=blood pressure pill at 8am
+
+User said: "hi there, how are you"
+Output: NONE
+
+User said: "{user_said}"
+Kalimi replied: "{kalimi_said}"
+Output:"""
+    try:
+        res = await client.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"},
+            json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 100}
+        )
+        data = res.json()
+        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        text = text.strip()
+        if not text or text.upper().startswith("NONE"):
+            return ""
+        return text
+    except Exception:
+        return ""
+
 def memory_to_prompt(memory: dict) -> str:
     if not memory:
         return ""
@@ -762,37 +850,19 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
         parts = full_reply.split("MEMORY:")
         clean_reply = parts[0].strip()
         memory_line = parts[1].strip()
-        for item in memory_line.split(","):
-            item = item.strip()
-            if "=" not in item:
-                continue
-            key, value = item.split("=", 1)
-            key = key.strip().lower().replace(" ", "_")
-            value = value.strip()
-            if key == "note":
-                memory.setdefault("notes", []).append(f"{value} ({time.strftime('%Y-%m-%d')})")
-            elif key in ("hobby","hobbies"):
-                memory.setdefault("hobbies", [])
-                if value not in memory["hobbies"]: memory["hobbies"].append(value)
-            elif key in ("medication","medications","med"):
-                memory.setdefault("medications", [])
-                if value not in memory["medications"]: memory["medications"].append(value)
-            elif key in ("fear","fears"):
-                memory.setdefault("fears", [])
-                if value not in memory["fears"]: memory["fears"].append(value)
-            elif key == "emotion":
-                memory.setdefault("emotional_history", []).append(f"{value} ({time.strftime('%Y-%m-%d')})")
-                memory["emotional_history"] = memory["emotional_history"][-10:]
-            elif key.startswith("favorite_"):
-                memory.setdefault("favorites", {})[key.replace("favorite_","")] = value
-            elif "_" in key and key.split("_")[0] in ("daughter","son","wife","husband","sister","brother","mother","father","friend","caregiver","doctor","grandson","granddaughter"):
-                rel, field = key.split("_", 1)
-                memory.setdefault("family", {}).setdefault(rel, {})[field] = value
-            else:
-                memory[key] = value
-        save_memory(req.user_id, memory)
+        apply_memory_line(memory, memory_line, req.user_id)
     else:
         clean_reply = full_reply
+
+    # Dedicated extraction pass — runs every turn, independent of Kalimi's reply,
+    # so short/warm conversational replies never cost us a fact worth remembering.
+    try:
+        async with httpx.AsyncClient(timeout=15) as extract_client:
+            extracted_line = await extract_memory_facts(extract_client, last_user, clean_reply, req.user_id)
+        if extracted_line:
+            apply_memory_line(memory, extracted_line, req.user_id)
+    except Exception as e:
+        print(f"Memory extraction error: {e}")
 
     log_telemetry("haven_request", {
         "user_id": req.user_id,
