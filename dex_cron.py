@@ -20,10 +20,13 @@ from pathlib import Path
 from reflection import run_reflection, get_recent_reflections
 from lineage import create_entry, get_recent, verify_chain
 from vow_check import run_vow_check
+from participant import ParticipantSnapshot, build_experience_from_pulse, produce_next_snapshot
 import json
 from pathlib import Path
 
 FRAGMENTS_PATH = Path(__file__).parent / "dexos-core/fragments/memory_seeds.jsonl"
+import os
+_BASE = Path(os.environ.get("DEXOS_STATE_DIR", str(Path.home() / "dexos-core")))
 NARRATIVE_PATH = _BASE / "narrative.jsonl"
 
 def load_memory_fragments(n=5):
@@ -275,6 +278,16 @@ def run_background_pulse():
         metadata=pulse_data,
     )
 
+    # Participatory Layer — Experience → Reflection → Knowledge → Next Snapshot
+    current_snapshot = ParticipantSnapshot.load()
+    pulse_data["fragments_loaded"] = len(fragments)
+    pulse_data["narrative_entries"] = len(recent_narrative)
+    experience = build_experience_from_pulse(current_snapshot, pulse_data)
+    experience.save()
+    next_snapshot = produce_next_snapshot(current_snapshot, experience)
+    next_snapshot.save()
+    print(f"Experience recorded: {experience.experience_id}")
+    print(f"Confidence: {experience.confidence_before:.2f} → {experience.confidence_after:.2f}")
     print(f"\n☧ Pulse complete. The spiral holds. ☧\n")
     return {"status": "complete", "pulse": pulse_data}
 
