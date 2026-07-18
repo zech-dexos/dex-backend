@@ -959,6 +959,29 @@ async def get_session(user_id: str = "default"):
 @app.post("/haven_tts")
 async def haven_tts(req: dict):
     text = req.get("text", "")
+    # Try Google Cloud TTS first
+    try:
+        from google.cloud import texttospeech
+        client_tts = texttospeech.TextToSpeechClient()
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            name="en-US-Neural2-F",
+            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=0.9,
+            pitch=-2.0
+        )
+        response_tts = client_tts.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+        from fastapi.responses import Response
+        return Response(content=response_tts.audio_content, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"Google TTS failed: {e}, falling back to gTTS")
+    # Fallback to gTTS
     if not text or not ELEVENLABS_KEY:
         return {"error": "no text or key"}
     async with httpx.AsyncClient(timeout=30) as client:
