@@ -7,3 +7,4 @@ discord.py
 firebase-admin
 google-generativeai
 google-cloud-aiplatform
+stripe

@@ -87,6 +87,9 @@ def log_telemetry(event: str, data: dict):
         print(f"[firestore] log failed: {e}")
 
 app = FastAPI(title="ReasonFlow API", version="1.0.0")
+from stripe_billing import router as stripe_router
+app.include_router(stripe_router)
+
 
 app.add_middleware(
     CORSMiddleware,
