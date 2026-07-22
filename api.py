@@ -1019,23 +1019,26 @@ async def debug_eleven():
 from gtts import gTTS
 import io
 
-@app.post("/haven_tts_free")
-async def haven_tts_free(req: dict):
-    text = req.get("text", "")
-    if not text:
-        return {"error": "no text"}
-    tts = gTTS(text=text, lang='en', slow=False)
-    mp3_fp = io.BytesIO()
-    tts.write_to_fp(mp3_fp)
-    mp3_fp.seek(0)
-    return StreamingResponse(mp3_fp, media_type="audio/mpeg")
+# Words gTTS mispronounces by default -- swap in a phonetic respelling
+# before synthesis only. The real spelling stays in chat bubbles/transcripts;
+# only what gets sent to gTTS changes.
+TTS_PRONUNCIATION_FIXES = {
+    "Kalimi": "Kah-LEE-mee",
+}
+
+def apply_pronunciation_fixes(text: str) -> str:
+    fixed = text
+    for real, phonetic in TTS_PRONUNCIATION_FIXES.items():
+        fixed = re.sub(re.escape(real), phonetic, fixed, flags=re.IGNORECASE)
+    return fixed
 
 @app.post("/haven_tts_free")
 async def haven_tts_free(req: dict):
     text = req.get("text", "")
     if not text:
         return {"error": "no text"}
-    tts = gTTS(text=text, lang='en', slow=False)
+    speakable_text = apply_pronunciation_fixes(text)
+    tts = gTTS(text=speakable_text, lang='en', slow=False)
     mp3_fp = io.BytesIO()
     tts.write_to_fp(mp3_fp)
     mp3_fp.seek(0)
