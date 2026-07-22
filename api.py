@@ -1023,7 +1023,7 @@ import io
 # before synthesis only. The real spelling stays in chat bubbles/transcripts;
 # only what gets sent to gTTS changes.
 TTS_PRONUNCIATION_FIXES = {
-    "Kalimi": "Kah-LEE-mee",
+    "Kalimi": "Kuh-LEE-mee",
 }
 
 def apply_pronunciation_fixes(text: str) -> str:
