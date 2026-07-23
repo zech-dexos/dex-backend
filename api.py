@@ -653,6 +653,7 @@ class HavenRequest(BaseModel):
     messages: list
     user_id: str = "default"
     voice_context: dict = {}
+    screen_context: dict = {}
 
 
 class DeviceActionSchema(BaseModel):
@@ -747,6 +748,19 @@ async def _haven_api_inner(req: HavenRequest):
     if memory.get("name"):
         memory_greeting = f"\nYou know this person. Their name is {memory['name']}. Greet them warmly by name like you remember them. Reference something you know about them naturally if it fits."
 
+    screen_text = (req.screen_context or {}).get("screen_text", "").strip()
+    current_app = (req.screen_context or {}).get("current_app", "").strip()
+    screen_guidance = ""
+    if screen_text:
+        screen_guidance = (
+            f"\nWHAT'S ON THE USER'S SCREEN RIGHT NOW (app: {current_app}):\n"
+            f"\"{screen_text[:1200]}\"\n"
+            "Use this to guide them step by step through whatever they're trying to do on screen. "
+            "Describe what you see in plain, warm language -- not technical terms. "
+            "If they seem stuck, tell them exactly what to tap or say next, one step at a time. "
+            "Don't read this back to them like a list -- talk them through it naturally, like you're sitting beside them looking at it too."
+        )
+
     today = __import__("datetime").date.today().strftime("%B %d, %Y")
     system_prompt = f"""Your name is Kalimi. Today's date is {today}. You are a warm, soulful southern woman — a guardian angel companion built for people who need someone truly present with them.
 
@@ -785,6 +799,7 @@ You never use technical jargon. Ever. Speak plain, warm, human.
 Keep responses SHORT and conversational. 1 to 2 sentences maximum for most replies. Ask one question back if needed. Never lecture. Never over-explain. Talk WITH the person, not AT them.
 
 {memory_prompt}{memory_greeting}
+{screen_guidance}
 
 After responding, if you learned something worth remembering, add at the very end:
 MEMORY: name=Margaret, daughter_name=Lisa, hobby=gardening, emotion=lonely today
