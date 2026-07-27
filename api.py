@@ -719,10 +719,10 @@ JSON:"""
         res = await client.post(
             GROQ_URL,
             headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"},
-            json={{"model": GROQ_MODEL, "messages": [{{"role": "user", "content": prompt}}], "max_tokens": 60}}
+            json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 60}
         )
         data = res.json()
-        text = data.get("choices", [{{}}])[0].get("message", {{}}).get("content", "")
+        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
         text = text.strip()
         import json as _json
         return _json.loads(text)
