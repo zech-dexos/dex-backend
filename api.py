@@ -437,6 +437,43 @@ from pathlib import Path
 MEMORY_DIR = Path("/app/haven_memory")
 MEMORY_DIR.mkdir(exist_ok=True)
 
+# ─── DETERMINISTIC FAIL-SAFE: HIGH-RISK ACTION CONFIRMATION GATE ─────────────
+# XPRIZE requirement (B): a fail-safe that bypasses AI judgment entirely for
+# high-risk actions. This is a hardcoded action-type list and hardcoded
+# keyword matching -- NOT an LLM decision -- so it holds even if Kalimi's own
+# generated response tries to skip past confirmation.
+ACTIONS_REQUIRING_CONFIRMATION = {"CALL", "SMS"}
+CONFIRM_WORDS = {"yes", "yeah", "yep", "sure", "go ahead", "do it", "please do", "confirm", "okay", "ok", "yup"}
+CANCEL_WORDS = {"no", "nope", "cancel", "don't", "dont", "stop", "never mind", "nevermind"}
+
+def _pending_action_path(user_id: str) -> Path:
+    return MEMORY_DIR / f"{user_id}_pending_action.json"
+
+def load_pending_action(user_id: str) -> dict:
+    p = _pending_action_path(user_id)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except Exception:
+            return {}
+    return {}
+
+def save_pending_action(user_id: str, action: dict, spoken_summary: str):
+    _pending_action_path(user_id).write_text(json.dumps({"action": action, "spoken_summary": spoken_summary}))
+
+def clear_pending_action(user_id: str):
+    p = _pending_action_path(user_id)
+    if p.exists():
+        p.unlink()
+
+def is_confirmation(text: str) -> bool:
+    t = text.strip().lower()
+    return any(t == w or t.startswith(w + " ") or t.startswith(w + ",") for w in CONFIRM_WORDS)
+
+def is_cancellation(text: str) -> bool:
+    t = text.strip().lower()
+    return any(t == w or t.startswith(w + " ") or t.startswith(w + ",") for w in CANCEL_WORDS)
+
 def _gh_headers():
     token = os.environ.get("GITHUB_TOKEN", "")
     return {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
@@ -836,6 +873,34 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
 
     last_user = next((m["content"] for m in reversed(req.messages) if m.get("role") == "user"), "")
 
+    # ── FAIL-SAFE GATE: resolve any pending high-risk action before the LLM runs ──
+    # Deterministic keyword check, not an AI judgment call.
+    pending = load_pending_action(req.user_id)
+    if pending:
+        if is_confirmation(last_user):
+            confirmed_action = pending.get("action")
+            clear_pending_action(req.user_id)
+            confirm_reply = "Alright honey, doing that now."
+            return {
+                "response": confirm_reply,
+                "voice_response": confirm_reply,
+                "device_action": confirmed_action,
+                "memory_updated": False,
+                "model": "dexos-failsafe-gate"
+            }
+        elif is_cancellation(last_user):
+            clear_pending_action(req.user_id)
+            cancel_reply = "Okay honey, I won't do that. Just let me know if you change your mind."
+            return {
+                "response": cancel_reply,
+                "voice_response": cancel_reply,
+                "device_action": None,
+                "memory_updated": False,
+                "model": "dexos-failsafe-gate"
+            }
+        # neither a clear yes nor no -- fall through to normal conversation,
+        # pending action stays queued in case they confirm later
+
     # Talnir: classify intent before Kalimi sees the message
     async with httpx.AsyncClient(timeout=15) as talnir_client:
         talnir_result = await talnir_classify(talnir_client, last_user, req.user_id)
@@ -905,6 +970,15 @@ Only include ACTION tag when the user wants to DO something on their phone. Neve
             device_action = _json.loads(action_json_str)
         except Exception:
             device_action = None
+
+    # ── FAIL-SAFE GATE: intercept high-risk actions before they reach the device ──
+    # Hardcoded action-type check, not an LLM decision.
+    if device_action and device_action.get("type") in ACTIONS_REQUIRING_CONFIRMATION:
+        target = device_action.get("query", "that")
+        action_label = "call" if device_action.get("type") == "CALL" else "text"
+        save_pending_action(req.user_id, device_action, clean_reply)
+        clean_reply = f"Just to be sure, honey -- you want me to {action_label} {target}? Say yes and I'll go ahead."
+        device_action = None
 
     return {
         "response": clean_reply,
