@@ -259,7 +259,6 @@ async def chat(req: ChatRequest):
         }
 
     if msg_stripped in ("!intents", "!intent"):
-        import asyncio, httpx
         from intent import load_intents, save_intents, generate_intents
 
         snapshot = ParticipantSnapshot.load()
