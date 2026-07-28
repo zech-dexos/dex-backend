@@ -107,15 +107,19 @@ async def generate_intents(client, packet, current_intents: list) -> list:
     messages = [{"role": "user", "content": prompt}]
 
     try:
-        result = await call_gemini(client, messages, max_tokens=500)
+        result = await call_gemini(client, messages, max_tokens=1000)
         if not result:
             return intents
         raw = result["reply"].strip()
         if raw.startswith("\u0060\u0060\u0060"):
             raw = raw.strip("\u0060").replace("json", "", 1).strip()
+        if not raw.rstrip().endswith("}"):
+            print(f"Intent generation: response appears truncated, skipping cycle. Raw tail: {raw[-60:]!r}")
+            return intents
         parsed = json.loads(raw)
-    except Exception:
-        return intents  # model call/parse failed — rules-only result stands, pulse continues
+    except Exception as e:
+        print(f"Intent generation: call/parse failed ({e}) \u2014 rules-only result stands")
+        return intents
 
     by_id = {i.intent_id: i for i in intents}
     for upd in parsed.get("updates", []):
