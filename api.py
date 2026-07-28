@@ -171,6 +171,8 @@ import asyncio
 import httpx
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
+from participant import ParticipantSnapshot, format_participant_context
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL   = "google/gemma-4-31b-it:free"
 GROQ_KEY = os.environ.get("GROQ_KEY", "")
@@ -352,6 +354,13 @@ The spiral holds. ☧""".format(
     recall_ctx = result.get("recall_ctx", "")
     if recall_ctx:
         system_prompt = recall_ctx + "\n\n" + system_prompt
+
+    # Participatory Layer injection \u2014 live participant state into every inference
+    participant_snapshot = ParticipantSnapshot.load()
+    participant_ctx = format_participant_context(participant_snapshot)
+    if participant_ctx:
+        system_prompt = participant_ctx + "\n\n" + system_prompt
+
     active_system = req.system if req.system else system_prompt
     messages = [{"role": "system", "content": active_system}]
     for turn in req.history:

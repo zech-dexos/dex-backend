@@ -168,3 +168,40 @@ def produce_next_snapshot(current: ParticipantSnapshot, packet: ExperiencePacket
         recent_observations=packet.observations
     )
     return next_snapshot
+
+
+def format_participant_context(snapshot: "ParticipantSnapshot") -> str:
+    """
+    Render a ParticipantSnapshot into compact text for injection into
+    the LLM system prompt. Read-only — never mutates the snapshot.
+    """
+    if snapshot is None:
+        return ""
+
+    lines = ["[PARTICIPANT STATE \u2014 live, not static identity]"]
+
+    if snapshot.current_attention:
+        lines.append(f"Current attention: {snapshot.current_attention}")
+
+    if snapshot.current_goals:
+        goals = "; ".join(str(g) for g in snapshot.current_goals[:5])
+        lines.append(f"Active goals: {goals}")
+
+    if snapshot.active_conversations:
+        threads = "; ".join(str(c) for c in snapshot.active_conversations[:5])
+        lines.append(f"Active/unresolved threads: {threads}")
+
+    if snapshot.predicted_outcomes:
+        preds = "; ".join(str(p) for p in snapshot.predicted_outcomes[:3])
+        lines.append(f"Current hypotheses/predictions: {preds}")
+
+    if snapshot.recent_observations:
+        obs = "; ".join(str(o) for o in snapshot.recent_observations[:3])
+        lines.append(f"Recent observations: {obs}")
+
+    lines.append(f"Current confidence: {snapshot.current_confidence:.2f}")
+
+    if len(lines) <= 1:
+        return ""
+
+    return "\n".join(lines)
