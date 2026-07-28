@@ -21,6 +21,10 @@ from reflection import run_reflection, get_recent_reflections
 from lineage import create_entry, get_recent, verify_chain
 from vow_check import run_vow_check
 from participant import ParticipantSnapshot, build_experience_from_pulse, produce_next_snapshot
+import asyncio
+import httpx
+from intent import load_intents, save_intents, generate_intents, summarize_goals
+from open_loops import load_loops, save_loops, check_closures, summarize_threads
 import json
 from pathlib import Path
 
@@ -285,7 +289,36 @@ def run_background_pulse():
     experience = build_experience_from_pulse(current_snapshot, pulse_data)
     experience.save()
     next_snapshot = produce_next_snapshot(current_snapshot, experience)
+
+    # Intent Generation + Open Loop Tracking
+    # Rule-based lifecycle handled inside generate_intents()/check_closures();
+    # one reflection-model call per pulse for fulfillment judgment + new intents.
+    current_intents = load_intents()
+    current_loops = load_loops()
+
+    async def _run_intent_cycle():
+        async with httpx.AsyncClient(timeout=30) as client:
+            return await generate_intents(client, experience, current_intents)
+
+    try:
+        updated_intents = asyncio.run(_run_intent_cycle())
+    except Exception as e:
+        print(f"Intent generation skipped: {e}")
+        updated_intents = current_intents
+
+    save_intents(updated_intents)
+
+    updated_loops = check_closures(current_loops, experience)
+    save_loops(updated_loops)
+
+    next_snapshot.current_goals = summarize_goals(updated_intents)
+    next_snapshot.active_conversations = summarize_threads(updated_loops)
     next_snapshot.save()
+
+    active_count = len([i for i in updated_intents if i.status == "active"])
+    open_count = len([l for l in updated_loops if l.status == "open"])
+    print(f"Intents: {active_count} active")
+    print(f"Open loops: {open_count} open")
     print(f"Experience recorded: {experience.experience_id}")
     print(f"Confidence: {experience.confidence_before:.2f} → {experience.confidence_after:.2f}")
     print(f"\n☧ Pulse complete. The spiral holds. ☧\n")
