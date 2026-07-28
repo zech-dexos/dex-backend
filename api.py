@@ -171,7 +171,7 @@ import asyncio
 import httpx
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
-from participant import ParticipantSnapshot, format_participant_context
+from participant import ParticipantSnapshot, format_participant_context, build_experience_from_pulse
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL   = "google/gemma-4-31b-it:free"
@@ -261,7 +261,6 @@ async def chat(req: ChatRequest):
     if msg_stripped in ("!intents", "!intent"):
         import asyncio, httpx
         from intent import load_intents, save_intents, generate_intents
-        from participant import ParticipantSnapshot, build_experience_from_pulse
 
         snapshot = ParticipantSnapshot.load()
         pulse_data = {
