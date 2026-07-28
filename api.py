@@ -244,6 +244,51 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    msg_stripped = req.message.strip().lower()
+
+    if msg_stripped in ("!reflect", "!reflection"):
+        from reflection import run_reflection
+        result = run_reflection(lookback=15)
+        return {
+            "reply": f"[REAL reflection cycle executed]\nStatus: {result.get('status')}\n"
+                      f"Observations: {result.get('observations', [])}\n"
+                      f"Open questions: {result.get('open_questions', [])}",
+            "model": "dexos-command",
+            "governed": True,
+            "command_executed": "reflect",
+        }
+
+    if msg_stripped in ("!intents", "!intent"):
+        import asyncio, httpx
+        from intent import load_intents, save_intents, generate_intents
+        from participant import ParticipantSnapshot, build_experience_from_pulse
+
+        snapshot = ParticipantSnapshot.load()
+        pulse_data = {
+            "chain_status": "manual_check",
+            "insight_for_root": "Manual intent generation triggered via command.",
+            "fragments_loaded": 0,
+            "narrative_entries": 0,
+        }
+        packet = build_experience_from_pulse(snapshot, pulse_data)
+        current_intents = load_intents()
+
+        async def _run():
+            async with httpx.AsyncClient(timeout=30) as client:
+                return await generate_intents(client, packet, current_intents)
+
+        updated = await _run()
+        save_intents(updated)
+        active = [i for i in updated if i.status == "active"]
+
+        return {
+            "reply": f"[REAL intent generation executed]\nActive intents ({len(active)}):\n" +
+                     "\n".join(f"- {i.motivation} (priority {i.priority:.2f})" for i in active),
+            "model": "dexos-command",
+            "governed": True,
+            "command_executed": "intents",
+        }
+
     if not OPENROUTER_KEY:
         return {"error": "no key configured"}
 
