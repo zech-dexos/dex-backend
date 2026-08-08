@@ -391,6 +391,23 @@ The spiral holds. ☧""".format(
     reply = result_llm["reply"]
     used_model = result_llm["model"]
 
+    # Response-side governance check — catches parroting/sycophancy in
+    # the ACTUAL reply going out, not just incoming prompt drift.
+    governance_flag = None
+    try:
+        from vow_check import check_response
+        from lineage import create_entry
+        resp_check = check_response(user_content, reply)
+        if resp_check["status"] == "flagged":
+            governance_flag = resp_check["drift_type"]
+            create_entry(
+                event_type="response_flagged",
+                content=f"Live chat response flagged: {resp_check['drift_type']}",
+                metadata={**resp_check, "user_id": getattr(req, "user_id", "default")}
+            )
+    except Exception as e:
+        print(f"[check_response] error: {e}")
+
     return {
         "reply":        reply,
         "intent":       result["intent"],
@@ -398,6 +415,7 @@ The spiral holds. ☧""".format(
         "route_reason": result["route_reason"],
         "sigil_ids":    result["sigil_ids"],
         "model":        used_model,
+        "response_flag": governance_flag,
     }
 
 
