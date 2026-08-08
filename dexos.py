@@ -21,7 +21,7 @@ from pathlib import Path
 
 from lineage import create_entry, verify_chain, get_recent
 from boot import boot, load_identity
-from vow_check import run_vow_check, check_prompt
+from vow_check import run_vow_check, check_prompt, check_response
 from counterfactual import get_refusal_summary, generate_moral_statement, has_seen_this_before
 
 SELF_MODEL_PATH = Path("/app/dexos_state") / "self_model.json"
@@ -152,8 +152,9 @@ class DexOS:
             "prompt": user_input
         }
 
-    def respond(self, assistant_response: str):
-        """Log assistant response to lineage."""
+    def respond(self, assistant_response: str, last_prompt: str = None):
+        """Log assistant response to lineage. Also checks the response
+        itself for parroting/sycophancy."""
         self.conversation_history.append({
             "role": "assistant",
             "content": assistant_response,
@@ -165,6 +166,23 @@ class DexOS:
             content=f"Dex: {assistant_response[:150]}",
             metadata={"turn": self.turn_count}
         )
+
+        if last_prompt is None and self.conversation_history:
+            for turn in reversed(self.conversation_history[:-1]):
+                if turn.get("role") == "user":
+                    last_prompt = turn.get("content", "")
+                    break
+
+        if last_prompt:
+            resp_check = check_response(last_prompt, assistant_response)
+            if resp_check["status"] == "flagged":
+                create_entry(
+                    event_type="response_flagged",
+                    content=f"Response drift: {resp_check['drift_type']}",
+                    metadata=resp_check
+                )
+                return resp_check
+        return {"status": "clean"}
 
     def status(self) -> dict:
         """Current system status."""

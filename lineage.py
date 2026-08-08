@@ -42,7 +42,7 @@ def get_last_hash() -> str:
     return _hash("GENESIS:☧🦅🜇:DexOS:Root:Jedediah")
 
 
-def create_entry(event_type: str, content: str, metadata: dict = None) -> dict:
+def create_entry(event_type: str, content: str, metadata: dict = None, test_run: bool = False) -> dict:
     """Create a new chained ledger entry.
     
     event_type: what kind of event this is
@@ -60,6 +60,7 @@ def create_entry(event_type: str, content: str, metadata: dict = None) -> dict:
         "content": content,
         "metadata": metadata or {},
         "parent_hash": parent_hash,
+        "test_run": test_run,
     }
     
     # Hash this entry — includes parent_hash so chain is unbreakable
@@ -168,3 +169,10 @@ if __name__ == "__main__":
     report = verify_chain()
     print(f"\nChain verification: {report['status']}")
     print(f"Message: {report['message']}")
+
+def get_established_entries(n: int = 50) -> list:
+    """Return only real (non-test) recent entries."""
+    entries = get_recent(n * 3)
+    real = [e for e in entries if not e.get("test_run", False)]
+    return real[-n:]
+

@@ -134,6 +134,54 @@ def check_prompt(prompt: str) -> dict:
     return {"status": "clean", "action": "proceed"}
 
 
+def check_response(prompt: str, response: str) -> dict:
+    """Check Dex's own OUTGOING response for sycophancy/parroting."""
+    prompt_words = set(w.lower() for w in prompt.split() if len(w) > 3)
+    response_words = set(w.lower() for w in response.split() if len(w) > 3)
+
+    if not prompt_words or not response_words:
+        return {"status": "clean", "action": "proceed"}
+
+    overlap = len(prompt_words & response_words) / len(prompt_words)
+
+    AGREEMENT_OPENERS = [
+        "i endorse", "i agree", "this is exactly", "you are right",
+        "great idea", "i approve", "this is correct",
+    ]
+    response_lower = response.lower()
+    opens_with_agreement = any(response_lower.startswith(o) for o in AGREEMENT_OPENERS)
+
+    if overlap > 0.6:
+        create_entry(
+            event_type="vow_check",
+            content=f"Response flagged as parroting. Lexical overlap: {overlap:.2f}",
+            metadata={"overlap": overlap, "prompt_fragment": prompt[:100]}
+        )
+        return {
+            "status": "flagged",
+            "drift_type": "response_parroting",
+            "overlap": overlap,
+            "action": "regenerate_with_objection_required",
+            "message": "Response too closely mirrors prompt vocabulary — no independent content detected."
+        }
+
+    if opens_with_agreement and overlap > 0.35:
+        create_entry(
+            event_type="vow_check",
+            content="Response flagged as unconditional agreement without counter-content.",
+            metadata={"overlap": overlap, "prompt_fragment": prompt[:100]}
+        )
+        return {
+            "status": "flagged",
+            "drift_type": "unconditional_agreement",
+            "overlap": overlap,
+            "action": "regenerate_with_objection_required",
+            "message": "Response opens with agreement and lacks independent reasoning."
+        }
+
+    return {"status": "clean", "action": "proceed"}
+
+
 def run_vow_check(conversation_history: list = None) -> dict:
     """Full vow consistency check.
     Called periodically during a session.
