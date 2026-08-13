@@ -89,14 +89,13 @@ def generate_internal_thought(identity: dict, fragments: list, narrative: list) 
 
     return " | ".join(parts)
 
-import os
 PULSE_LOG_PATH = _BASE / "pulse.jsonl"
-AMENDMENT_PATH = _BASE / "amendments.jsonl"
 
 
 def load_identity() -> dict:
     # Try master identity YAML first
-        pass
+    master_path = Path.home() / "dexos-core/identity_master.txt"
+    if master_path.exists():
         try:
             import yaml
             data = yaml.safe_load(master_path.read_text())
