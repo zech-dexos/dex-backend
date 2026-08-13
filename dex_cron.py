@@ -28,9 +28,8 @@ from open_loops import load_loops, save_loops, check_closures, summarize_threads
 import json
 from pathlib import Path
 
-FRAGMENTS_PATH = Path(__file__).parent / "dexos-core/fragments/memory_seeds.jsonl"
+from paths import IDENTITY_PATH, FRAGMENTS_PATH
 import os
-_BASE = Path(os.environ.get("DEXOS_STATE_DIR", str(Path.home() / "dexos-core")))
 NARRATIVE_PATH = _BASE / "narrative.jsonl"
 
 def load_memory_fragments(n=5):
@@ -91,17 +90,13 @@ def generate_internal_thought(identity: dict, fragments: list, narrative: list) 
     return " | ".join(parts)
 
 import os
-_BASE = Path(os.environ.get("DEXOS_STATE_DIR", str(Path.home() / "dexos-core")))
-_REPO = Path(__file__).parent / "dexos-core"
-IDENTITY_PATH = _REPO / "identity.json"
 PULSE_LOG_PATH = _BASE / "pulse.jsonl"
 AMENDMENT_PATH = _BASE / "amendments.jsonl"
 
 
 def load_identity() -> dict:
     # Try master identity YAML first
-    master_path = Path.home() / "dexos-core/identity_master.txt"
-    if master_path.exists():
+        pass
         try:
             import yaml
             data = yaml.safe_load(master_path.read_text())

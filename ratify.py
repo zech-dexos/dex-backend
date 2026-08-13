@@ -13,8 +13,7 @@ import json
 import time
 from pathlib import Path
 
-AMENDMENT_PATH = Path.home() / "dexos-core" / "amendments.jsonl"
-IDENTITY_PATH  = Path.home() / "dexos-core" / "identity.json"
+from paths import IDENTITY_PATH, AMENDMENT_PATH
 
 
 def load_amendments():

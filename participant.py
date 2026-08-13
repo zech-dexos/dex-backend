@@ -13,8 +13,7 @@ from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-EXPERIENCES_PATH = Path(__file__).parent / "dexos-core/experiences.jsonl"
-PARTICIPANT_PATH = Path(__file__).parent / "dexos-core/participant_state.json"
+from paths import EXPERIENCES_PATH, PARTICIPANT_PATH
 
 @dataclass
 class ParticipantSnapshot:

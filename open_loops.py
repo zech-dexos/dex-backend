@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
-LOOPS_PATH = Path(__file__).parent / "dexos-core/open_loops.json"
+from paths import LOOPS_PATH
 
 
 @dataclass

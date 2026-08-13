@@ -18,9 +18,7 @@ import time
 from pathlib import Path
 from lineage import create_entry, get_recent, verify_chain
 
-REFLECTION_PATH = Path.home() / "dexos-core" / "reflections.jsonl"
-IDENTITY_PATH = Path.home() / "dexos-core" / "identity.json"
-AMENDMENT_PATH = Path.home() / "dexos-core" / "amendments.jsonl"
+from paths import IDENTITY_PATH, AMENDMENT_PATH, REFLECTION_PATH
 
 
 def load_identity() -> dict:

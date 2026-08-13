@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from lineage import create_entry, verify_chain, get_recent
 
-IDENTITY_PATH = Path("/app/dexos_state") / "identity.json"
+from paths import IDENTITY_PATH
 SELF_MODEL_PATH = Path("/app/dexos_state") / "self_model.json"
 
 

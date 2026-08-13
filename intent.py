@@ -11,7 +11,7 @@ from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-INTENTS_PATH = Path(__file__).parent / "dexos-core/intents.json"
+from paths import INTENTS_PATH
 
 
 @dataclass

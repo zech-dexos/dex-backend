@@ -23,7 +23,7 @@ FILES_TO_PERSIST = [
     "counterfactual_archive.jsonl"
 ]
 
-STATE_DIR = Path("/app/dexos_state") if Path("/app").exists() else Path.home() / "dexos-core"
+from paths import _STATE_BASE as STATE_DIR
 
 def _headers():
     return {
