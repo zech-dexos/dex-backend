@@ -436,7 +436,7 @@ import json
 import time
 from pathlib import Path
 
-MEMORY_DIR = Path("/app/haven_memory")
+MEMORY_DIR = Path(__file__).resolve().parent / "haven_memory"
 MEMORY_DIR.mkdir(exist_ok=True)
 
 # ─── DETERMINISTIC FAIL-SAFE: HIGH-RISK ACTION CONFIRMATION GATE ─────────────
