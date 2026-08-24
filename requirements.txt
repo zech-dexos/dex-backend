@@ -6,7 +6,7 @@ gtts
 discord.py
 firebase-admin>=7.0.0
 google-generativeai==0.8.6
-google-cloud-aiplatform>=1.163.0
+google-cloud-aiplatform==1.165.1
 stripe
 grpcio>=1.75.0
 setuptools
