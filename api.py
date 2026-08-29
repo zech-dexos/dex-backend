@@ -374,6 +374,17 @@ Begin.
             )
     except Exception as e:
         print(f"[check_response] error: {e}")
+    try:
+        from dex_memory import log_interaction
+        log_interaction(
+            user_id=getattr(req, "user_id", "default"),
+            user_input=user_content,
+            dex_response=reply,
+            intent=result.get("intent", ""),
+            model=used_model,
+        )
+    except Exception as e:
+        print(f"[log_interaction] error: {e}")
 
     return {
         "reply":        reply,
