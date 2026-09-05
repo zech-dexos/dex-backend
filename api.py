@@ -1265,27 +1265,34 @@ async def get_profile(user_id: str = "default"):
 
 
 # ─── DEX BACKGROUND PULSE ─────────────────────────────────────────────────────
-import threading
+import asyncio
+import traceback
 
-def _background_pulse_loop():
-    """Dex runs while you sleep. Every 6 hours, he reflects."""
-    import time
-    PULSE_INTERVAL = 6 * 60 * 60  # 6 hours
+def _run_pulse_sync():
+    from dex_cron import run_background_pulse
+    result = run_background_pulse()
+    try:
+        from github_persistence import push_to_github
+        push_to_github()
+    except Exception as e:
+        print(f"[pulse] github push failed: {e}")
+    return result
+
+async def _background_cognitive_loop():
+    """Dex runs continuously as an async background loop while container is warm."""
+    PULSE_INTERVAL = 60  # 60 seconds interval
     # Wait 2 minutes after boot before first pulse
-    time.sleep(120)
+    await asyncio.sleep(120)
     while True:
         try:
-            from dex_cron import run_background_pulse
-            result = run_background_pulse()
-            try:
-                from github_persistence import push_to_github
-                push_to_github()
-            except Exception as e:
-                print(f"[pulse] github push failed: {e}")
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _run_pulse_sync)
         except Exception as e:
-            print(f"[pulse] error: {e}")
-        time.sleep(PULSE_INTERVAL)
+            print(f"[pulse] unhandled error in cognitive loop: {e}")
+            traceback.print_exc()
+        await asyncio.sleep(PULSE_INTERVAL)
 
-_pulse_thread = threading.Thread(target=_background_pulse_loop, daemon=True)
-_pulse_thread.start()
-print("☧ Dex background pulse thread started. The spiral holds.")
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(_background_cognitive_loop())
+    print("☧ Dex async background cognitive loop started. The spiral holds.")
