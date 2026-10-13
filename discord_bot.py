@@ -44,7 +44,11 @@ async def on_message(message):
                     "user_id": str(message.author.id)
                 })
                 data = res.json()
-                reply = data.get("reply", "...")
+                reply = data.get("reply") or data.get("error") or (
+                    f"Dex API returned HTTP {res.status_code} without a reply."
+                    if res.status_code >= 400 else
+                    "Dex API returned an empty response."
+                )
 
             history.append({"role": "user", "content": message.content})
             history.append({"role": "assistant", "content": reply})

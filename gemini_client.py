@@ -34,12 +34,16 @@ async def call_gemini(client, messages, max_tokens=1000):
             json=payload,
         )
         data = res.json()
+        if res.status_code >= 400 or data.get("error"):
+            print(f"[call_gemini] HTTP {res.status_code}: {data.get('error', data)}")
+            return None
         candidates = data.get("candidates", [])
         if candidates:
             parts = candidates[0].get("content", {}).get("parts", [])
             text = "".join(p.get("text", "") for p in parts)
             if text:
                 return {"reply": text, "model": "gemini-2.5-flash"}
-    except Exception:
-        pass
+        print(f"[call_gemini] no text candidate (HTTP {res.status_code}): {data.get('promptFeedback', data.get('candidates', []))}")
+    except Exception as e:
+        print(f"[call_gemini] request exception: {e}")
     return None
