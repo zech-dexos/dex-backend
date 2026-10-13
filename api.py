@@ -208,9 +208,10 @@ async def call_llm(client, messages, max_tokens=1000):
                 content = data.get("choices",[{}])[0].get("message",{}).get("content","")
                 if content:
                     return {"reply": content, "model": GROQ_MODEL}
-        except Exception:
-            pass
-    for model in FALLBACK_MODELS:
+        except Exception as e:
+            print(f"[call_llm] Groq exception: {e}")
+    # OpenRouter is optional: do not block Gemini/Groq when its key is absent.
+    for model in (FALLBACK_MODELS if OPENROUTER_KEY else []):
         try:
             res = await client.post(
                 OPENROUTER_URL,
@@ -227,8 +228,11 @@ async def call_llm(client, messages, max_tokens=1000):
                 content = data.get("choices",[{}])[0].get("message",{}).get("content","")
                 if content:
                     return {"reply": content, "model": model}
-        except Exception:
-            pass
+                print(f"[call_llm] {model} returned no message content (HTTP {res.status_code})")
+            else:
+                print(f"[call_llm] {model} returned error (HTTP {res.status_code}): {data.get('error')}")
+        except Exception as e:
+            print(f"[call_llm] {model} exception: {e}")
         await asyncio.sleep(1)
     return {"reply": "[all models failed]", "model": "none"}
 
@@ -284,8 +288,8 @@ async def chat(req: ChatRequest):
             "command_executed": "intents",
         }
 
-    if not OPENROUTER_KEY:
-        return {"error": "no key configured"}
+    if not (GEMINI_KEY or GROQ_KEY or OPENROUTER_KEY):
+        return {"error": "no model provider configured"}
 
     result = dex_runtime(req.message, user_id=getattr(req, "user_id", "default"))
 
